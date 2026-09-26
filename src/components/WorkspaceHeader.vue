@@ -39,18 +39,18 @@ defineEmits(['toggle-theme'])
 
 const products = {
   photos: {
-    name: '相册',
-    kicker: 'ANeko / 照片',
+    name: 'Photos',
+    kicker: 'ANeko / FRAMES',
     copy: '从相册取回光影与片刻',
   },
   drive: {
-    name: '网盘',
-    kicker: 'ANeko / 文件存储',
+    name: 'Drive',
+    kicker: 'ANeko / STORAGE',
     copy: '文件、目录与归档',
   },
   mail: {
-    name: '邮箱',
-    kicker: 'ANeko / 收件箱',
+    name: 'Mail',
+    kicker: 'ANeko / INBOX',
     copy: '连接已有邮箱，收取与发送邮件',
   },
 }

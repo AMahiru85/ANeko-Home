@@ -7,7 +7,7 @@
         </svg>
         <div>
           <p class="githubEyebrow">GitHub</p>
-          <h2 id="github-module-title">开发者动态</h2>
+          <h2 id="github-module-title">Developer Activity</h2>
         </div>
       </div>
 
