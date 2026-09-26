@@ -9,7 +9,6 @@ const INDEXNOW_ENDPOINTS = [
 const INDEXNOW_KEY_PATTERN = /^[A-Za-z0-9-]{8,128}$/
 const MAX_URLS_PER_REQUEST = 10_000
 const REQUEST_TIMEOUT_MS = 4_000
-const KEY_CHECK_TIMEOUT_MS = 3_000
 const SUBMISSION_TIMEOUT_MS = 12_000
 const siteUrl = new URL(SITE_ORIGIN)
 const PROVIDER_NAMES: Record<string, string> = {
@@ -52,12 +51,6 @@ export interface IndexNowSubmissionResult {
   pending: number
   status: 'empty' | 'accepted' | 'pending'
   providers: string[]
-  keyVerification?: {
-    status: 'verified' | 'unconfirmed'
-    code?: string
-    message?: string
-    httpStatus?: number
-  }
 }
 
 export function isValidIndexNowKey(key: string) {
@@ -183,64 +176,6 @@ async function withTimeout<T>(milliseconds: number, operation: (signal: AbortSig
   }
 }
 
-async function publicKeyMatches(response: Response, key: string, signal: AbortSignal) {
-  const reader = response.body?.getReader()
-  if (!reader) return false
-  const decoder = new TextDecoder()
-  let bytes = 0
-  let content = ''
-  const cancel = () => { void reader.cancel().catch(() => undefined) }
-  signal.addEventListener('abort', cancel, { once: true })
-  try {
-    while (!signal.aborted) {
-      const { done, value } = await reader.read()
-      if (done) return (content + decoder.decode()).trim() === key
-      bytes += value.byteLength
-      if (bytes > 256) return false
-      content += decoder.decode(value, { stream: true })
-    }
-    return false
-  } finally {
-    signal.removeEventListener('abort', cancel)
-    cancel()
-  }
-}
-
-async function verifyPublicKey(key: string, deadline: number) {
-  try {
-    await withTimeout(Math.min(KEY_CHECK_TIMEOUT_MS, deadline - Date.now()), async (signal) => {
-      const response = await fetch(new URL(`/${key}.txt`, siteUrl), {
-        method: 'GET',
-        redirect: 'manual',
-        cache: 'no-store',
-        signal,
-      })
-      if (response.status !== 200) {
-        closeResponse(response)
-        throw new IndexNowError(
-          'configuration',
-          `公开密钥文件返回 HTTP ${response.status}，请检查 HTTPS 访问、域名绑定和 Cloudflare 访问规则。`,
-          response.status, undefined, undefined, 'key_file_http',
-        )
-      }
-      if (!await publicKeyMatches(response, key, signal)) {
-        throw new IndexNowError(
-          'configuration',
-          '公开密钥文件内容与当前配置不一致，请检查 INDEXNOW_KEY 和已部署版本，必要时清除该文件缓存。',
-          undefined, undefined, undefined, 'key_file_mismatch',
-        )
-      }
-    })
-  } catch (error) {
-    if (error instanceof IndexNowError) throw error
-    throw new IndexNowError(
-      'network',
-      '暂时无法通过 HTTPS 验证公开密钥文件，请稍后重试并检查域名是否可访问。',
-      undefined, undefined, undefined, 'key_file_unreachable',
-    )
-  }
-}
-
 async function requestIndexNow(endpoint: string, body: string, deadline: number) {
   const provider = PROVIDER_NAMES[endpoint] ?? 'IndexNow'
   const remaining = deadline - Date.now()
@@ -253,12 +188,21 @@ async function requestIndexNow(endpoint: string, body: string, deadline: number)
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body,
-        redirect: 'error',
+        // The deployed Workers runtime rejects redirect: 'error' before I/O.
+        redirect: 'manual',
         signal,
       })
       closeResponse(response)
       if (response.status === 200 || response.status === 202) {
         return { status: response.status, provider }
+      }
+      if (response.status >= 300 && response.status < 400) {
+        // Do not forward the key/URL batch to an arbitrary redirect target.
+        throw new IndexNowError(
+          'upstream',
+          `${provider} 提交接口返回 HTTP ${response.status} 重定向，本次未提交成功，请检查提交接口地址。`,
+          response.status, validRetryAfter(response.headers.get('Retry-After')), provider, 'provider_redirect',
+        )
       }
       throw new IndexNowError(
         'upstream',
@@ -309,7 +253,6 @@ export function indexNowUpstreamHint(status: number) {
 
 export async function submitIndexNow(
   paths: Iterable<string>,
-  options: { verifyKey?: boolean } = {},
 ): Promise<IndexNowSubmissionResult> {
   const deadline = Date.now() + SUBMISSION_TIMEOUT_MS
   const bindings = getBindings()
@@ -325,18 +268,8 @@ export async function submitIndexNow(
   if (!urlList.length) return result
 
   try {
-    if (options.verifyKey) {
-      // The Worker may be unable to fetch its own public route even when search
-      // engines can reach it. This check is advisory; the provider decides.
-      try {
-        await verifyPublicKey(key, deadline)
-        result.keyVerification = { status: 'verified' }
-      } catch (error) {
-        result.keyVerification = error instanceof IndexNowError
-          ? { status: 'unconfirmed', code: error.code, message: error.message, httpStatus: error.status }
-          : { status: 'unconfirmed', code: 'key_file_unreachable', message: '站点暂时无法完成公开密钥文件自检。' }
-      }
-    }
+    // The provider verifies keyLocation externally. A same-zone Worker fetch
+    // can reach a different origin, so it cannot reliably verify this route.
     for (let offset = 0; offset < urlList.length; offset += MAX_URLS_PER_REQUEST) {
       const batch = urlList.slice(offset, offset + MAX_URLS_PER_REQUEST)
       const response = await submitIndexNowBatch(key, batch, deadline)

@@ -225,7 +225,7 @@ pnpm exec wrangler tail --config wrangler.jsonc
 
 公开文章保存或删除成功后会自动向 IndexNow 提交受影响的文章、列表、归档、标签和分页 URL。管理页中的“提交收录”按钮可批量提交当前所有公开页面。服务端会通过站点根目录下不可猜测的同名 `.txt` 路由向搜索引擎验证 key；不要把 key 或完整验证地址写入仓库、日志和公开文档。
 
-IndexNow 的 `200` 表示已接收，`202` 表示已接收并等待密钥验证，都不保证最终收录。手动提交会检查公开密钥文件，但自检仅用于补充诊断，自检失败不会阻止提交，提交结果以搜索引擎响应为准。错误提示会区分密钥验证失败、提交网址不匹配和搜索引擎限流。每次提交有时间上限，遇到 `Retry-After` 不会立即重复提交。
+IndexNow 的 `200` 表示已接收，`202` 表示已接收并等待密钥验证，都不保证最终收录。搜索引擎通过 `keyLocation` 验证公开密钥文件；Worker 不向自身域名发起自检，以免同区域内部请求的路由差异导致误报。错误提示会区分密钥验证失败、提交网址不匹配和搜索引擎限流。每次提交有时间上限，遇到 `Retry-After` 不会立即重复提交。出站请求使用 Workers 支持的 `redirect: 'manual'`；提交接口的重定向会作为明确错误返回，不会转发提交内容。
 
 博客索引和文章元数据位于 KV，正文位于 R2 的 `blog/posts/`，附件位于 `blog/assets/`。迁移时必须同时迁移 KV 和 R2，不能只复制其中一项。
 
@@ -238,7 +238,7 @@ IndexNow 的 `200` 表示已接收，`202` 表示已接收并等待密钥验证�
 无需站点构建即可执行博客与 IndexNow 的离线回归用例：
 
 ```sh
-node --test tests/blog-storage.test.mjs scripts/indexnow.test.mjs
+node --test tests/blog-storage.test.mjs scripts/indexnow.test.mjs scripts/indexnow-worker.test.mjs
 ```
 
 ### 网盘

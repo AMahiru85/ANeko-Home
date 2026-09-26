@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const result = await submitIndexNow(allIndexNowPaths(posts), { verifyKey: true })
+    const result = await submitIndexNow(allIndexNowPaths(posts))
     return successResponse(result, result.pending > 0 ? 202 : 200)
   } catch (error) {
     if (error instanceof IndexNowError) {
@@ -48,19 +48,14 @@ export const POST: APIRoute = async ({ request }) => {
       const partialMessage = progress?.submitted
         ? `其中 ${progress.submitted}/${progress.requested} 个页面已被接收，其余页面尚未提交成功。`
         : ''
-      const keyVerification = progress?.keyVerification
-      const verificationMessage = keyVerification?.status === 'unconfirmed'
-        ? `站点自检补充：${keyVerification.message} 此自检结果不代表搜索引擎的访问结果。`
-        : ''
       const response = jsonResponse({
         success: false,
-        error: `${error.message}${partialMessage}${verificationMessage}`,
+        error: `${error.message}${partialMessage}`,
         diagnostic: {
           code: error.code,
           provider: error.provider,
           upstreamStatus: error.status,
           retryAfter: error.retryAfter,
-          keyVerification,
           progress,
         },
       }, status)

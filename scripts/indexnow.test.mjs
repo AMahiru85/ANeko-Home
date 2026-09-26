@@ -90,7 +90,7 @@ test('invalid configuration is rejected consistently by submission and public ke
   assert.equal((await harness.keyRoute.GET({ params: { key: 'unrelated-valid-key' } })).status, 404)
 })
 
-test('manual submission verifies the public key and reports accepted URLs', async () => {
+test('manual submission sends keyLocation to the provider without a self-fetch', async () => {
   const harness = setup()
   const response = await harness.submit()
   assert.equal(response.status, 200)
@@ -99,20 +99,19 @@ test('manual submission verifies the public key and reports accepted URLs', asyn
   assert.equal(data.status, 'accepted')
   assert.equal(data.accepted, 7)
   assert.equal(data.pending, 0)
-  assert.equal(harness.calls.length, 2)
-  assert.equal(harness.calls[0].url, `${origin}/${testKey}.txt`)
+  assert.equal(harness.calls.length, 1)
+  assert.equal(harness.calls[0].url, 'https://api.indexnow.org/indexnow')
+  assert.equal(harness.calls[0].init.method, 'POST')
   assert.equal(harness.calls[0].init.redirect, 'manual')
-  const body = JSON.parse(harness.calls[1].init.body)
+  const body = JSON.parse(harness.calls[0].init.body)
   assert.equal(body.host, 'www.aneko.ink')
-  assert.equal(body.keyLocation, harness.calls[0].url)
+  assert.equal(body.keyLocation, `${origin}/${testKey}.txt`)
   assert.equal(body.key, testKey)
   assert.deepEqual({ ...harness.postReads[0] }, { refresh: true, allowStale: false })
 })
 
 test('202 means pending key verification and does not trigger another provider', async () => {
-  const harness = setup({ fetch: ({ init }) => new Response(init.method === 'GET' ? testKey : '', {
-    status: init.method === 'GET' ? 200 : 202,
-  }) })
+  const harness = setup({ fetch: () => new Response('', { status: 202 }) })
   const response = await harness.submit()
   assert.equal(response.status, 202)
   const { data } = await response.json()
@@ -120,7 +119,7 @@ test('202 means pending key verification and does not trigger another provider',
   assert.equal(data.submitted, 7)
   assert.equal(data.pending, 7)
   assert.equal(data.accepted, 0)
-  assert.equal(harness.calls.length, 2)
+  assert.equal(harness.calls.length, 1)
 })
 
 test('URLs are normalized, deduplicated, and restricted to the canonical origin', async () => {
@@ -177,12 +176,10 @@ test('403 and 422 have safe Chinese diagnostics and never echo upstream content'
   for (const [status, routeStatus, message] of [[403, 502, /密钥验证失败/], [422, 422, /主机不匹配/]]) {
     await t.test(String(status), async () => {
       let canceled = false
-      const harness = setup({ fetch: ({ init }) => init.method === 'GET'
-        ? new Response(testKey)
-        : new Response(new ReadableStream({
-          start(controller) { controller.enqueue(new TextEncoder().encode(`${testKey} ${'secret'.repeat(100_000)}`)) },
-          cancel() { canceled = true },
-        }), { status }) })
+      const harness = setup({ fetch: () => new Response(new ReadableStream({
+        start(controller) { controller.enqueue(new TextEncoder().encode(`${testKey} ${'secret'.repeat(100_000)}`)) },
+        cancel() { canceled = true },
+      }), { status }) })
       const response = await harness.submit()
       assert.equal(response.status, routeStatus)
       const body = await response.text()
@@ -190,7 +187,7 @@ test('403 and 422 have safe Chinese diagnostics and never echo upstream content'
       assert.equal(body.includes(testKey), false)
       assert.equal(JSON.stringify(harness.logs).includes(testKey), false)
       assert.equal(canceled, true)
-      assert.equal(harness.calls.length, 2)
+      assert.equal(harness.calls.length, 1)
     })
   }
 })
@@ -198,13 +195,11 @@ test('403 and 422 have safe Chinese diagnostics and never echo upstream content'
 test('429 and Retry-After stop immediately and preserve the provider delay', async (t) => {
   for (const [status, delay] of [[429, '86400'], [503, 'Wed, 01 Oct 2031 00:00:00 GMT'], [429, null]]) {
     await t.test(`${status} ${delay}`, async () => {
-      const harness = setup({ fetch: ({ init }) => init.method === 'GET'
-        ? new Response(testKey)
-        : new Response('', { status, headers: delay ? { 'Retry-After': delay } : {} }) })
+      const harness = setup({ fetch: () => new Response('', { status, headers: delay ? { 'Retry-After': delay } : {} }) })
       const response = await harness.submit()
       assert.equal(response.status, status)
       assert.equal(response.headers.get('Retry-After'), delay)
-      assert.equal(harness.calls.length, 2)
+      assert.equal(harness.calls.length, 1)
       const { error, diagnostic } = await response.json()
       assert.match(error, status === 429 ? /过于频繁/ : /服务暂时异常/)
       assert.equal(diagnostic.upstreamStatus, status)
@@ -212,68 +207,29 @@ test('429 and Retry-After stop immediately and preserve the provider delay', asy
   }
 })
 
-test('public key self-check failures are advisory when the provider accepts the URLs', async (t) => {
-  for (const mode of ['mismatch', 'redirect', 'oversized', 'http-failure', 'network-failure']) {
-    await t.test(mode, async () => {
-      let canceled = false
-      const harness = setup({ fetch: ({ init }) => {
-        if (init.method === 'POST') return new Response('')
-        if (mode === 'network-failure') throw new Error(`unreachable ${testKey}`)
-        if (mode === 'http-failure') return new Response('', { status: 503 })
-        return mode === 'redirect'
-          ? new Response('', { status: 302, headers: { Location: 'https://untrusted.example/' } })
-          : mode === 'oversized'
-            ? new Response(new ReadableStream({
-              start(controller) { controller.enqueue(new Uint8Array(257)) },
-              cancel() { canceled = true },
-            }))
-            : new Response('wrong-key-never-log-this')
-      } })
+test('provider redirects are reported without following or disguising them as network failures', async (t) => {
+  for (const status of [301, 302, 303, 307, 308]) {
+    await t.test(String(status), async () => {
+      const harness = setup({ fetch: () => new Response('', {
+        status,
+        headers: { Location: `https://other.example/${testKey}` },
+      }) })
       const response = await harness.submit()
-      assert.equal(response.status, 200)
+      assert.equal(response.status, 502)
       const text = await response.text()
+      const result = JSON.parse(text)
+      assert.equal(result.diagnostic.code, 'provider_redirect')
+      assert.equal(result.diagnostic.upstreamStatus, status)
+      assert.match(result.error, /重定向/)
       assert.equal(text.includes(testKey), false)
-      assert.equal(text.includes('wrong-key-never-log-this'), false)
-      assert.equal(harness.calls.length, 2)
-      const { data } = JSON.parse(text)
-      assert.equal(data.accepted, 7)
-      assert.equal(data.keyVerification.status, 'unconfirmed')
-      if (mode === 'oversized') assert.equal(canceled, true)
+      assert.equal(JSON.stringify(harness.logs).includes(testKey), false)
+      assert.equal(harness.calls.length, 1)
+      assert.equal(harness.calls[0].init.redirect, 'manual')
     })
   }
 })
 
-test('a provider rejection includes the separate safe public key self-check diagnostic', async () => {
-  const harness = setup({ fetch: ({ init }) => new Response(testKey, {
-    status: init.method === 'GET' ? 503 : 403,
-  }) })
-  const response = await harness.submit()
-  assert.equal(response.status, 502)
-  const text = await response.text()
-  const result = JSON.parse(text)
-  assert.match(result.error, /密钥验证失败/)
-  assert.match(result.error, /自检补充/)
-  assert.equal(result.diagnostic.upstreamStatus, 403)
-  assert.equal(result.diagnostic.keyVerification.httpStatus, 503)
-  assert.equal(result.diagnostic.keyVerification.status, 'unconfirmed')
-  assert.equal(text.includes(testKey), false)
-  assert.equal(harness.calls.length, 2)
-})
-
-test('202 remains pending when the Worker cannot access its own public key route', async () => {
-  const harness = setup({ fetch: ({ init }) => new Response('', {
-    status: init.method === 'GET' ? 503 : 202,
-  }) })
-  const response = await harness.submit()
-  assert.equal(response.status, 202)
-  const { data } = await response.json()
-  assert.equal(data.pending, 7)
-  assert.equal(data.accepted, 0)
-  assert.equal(data.keyVerification.status, 'unconfirmed')
-  assert.equal(harness.calls.length, 2)
-})
-
-test('timeouts abort both providers, and a stalled public key stream is canceled', async () => {
+test('timeouts abort both providers', async () => {
   const durations = []
   const harness = setup({
     fetch: () => new Promise(() => {}),
@@ -282,20 +238,6 @@ test('timeouts abort both providers, and a stalled public key stream is canceled
   await assert.rejects(harness.indexnow.submitIndexNow(['/']), { code: 'provider_timeout' })
   assert.deepEqual(durations, [4000, 4000])
   assert.equal(harness.calls.every((call) => call.init.signal.aborted), true)
-
-  let canceled = false
-  const stalled = setup({
-    fetch: ({ init }) => init.method === 'POST' ? new Response('')
-      : new Response(new ReadableStream({ cancel() { canceled = true } })),
-    globals: { setTimeout: (callback) => setTimeout(callback, 1) },
-  })
-  const response = await stalled.submit()
-  assert.equal(response.status, 200)
-  const { data } = await response.json()
-  assert.equal(data.accepted, 7)
-  assert.equal(data.keyVerification.code, 'key_file_unreachable')
-  assert.equal(canceled, true)
-  assert.equal(stalled.calls.length, 2)
 })
 
 test('large submissions batch at 10,000 URLs and preserve partial progress on failure', async () => {
