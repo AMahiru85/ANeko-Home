@@ -479,8 +479,17 @@ function parseMailConfigRecord(value: unknown): MailConfigRecord {
 }
 
 function readStoredConfiguration(record: MailConfigRecord) {
+  const storedConnection = (connection: MailConnectionConfig) => ({
+    ...connection,
+    password: connection.password === '' ? null : connection.password,
+  })
   const configuration = normalizeConfiguration(
-    { ...record.configuration, revision: record.revision },
+    {
+      ...record.configuration,
+      revision: record.revision,
+      imap: storedConnection(record.configuration.imap),
+      smtp: storedConnection(record.configuration.smtp),
+    },
     emptyConfiguration(),
   )
   return {
@@ -535,8 +544,12 @@ function parseMailWebhookRecord(value: unknown): MailWebhookRecord {
 }
 
 function readStoredWebhookStore(record: MailWebhookRecord): MailWebhookStore {
+  const endpoints = record.store.endpoints.map((endpoint) => ({
+    ...endpoint,
+    token: endpoint.token === '' ? null : endpoint.token,
+  }))
   const store = normalizeWebhookStore(
-    { ...record.store, revision: record.revision },
+    { ...record.store, endpoints, revision: record.revision },
     emptyWebhookStore(),
   )
   return { ...store, revision: record.revision, updatedAt: record.updatedAt }
