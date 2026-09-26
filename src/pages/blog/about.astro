@@ -1,12 +1,20 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro'
-import { getPublishedPosts, getTagEntries } from '../../utils/posts'
+import { BlogDataUnavailableError, getPublishedPosts, getTagEntries } from '../../utils/posts'
 
 export const prerender = false
 
-const posts = await getPublishedPosts()
+let posts: Awaited<ReturnType<typeof getPublishedPosts>> = []
+let statsUnavailable = false
+try {
+  posts = await getPublishedPosts()
+} catch (error) {
+  if (!(error instanceof BlogDataUnavailableError)) throw error
+  statsUnavailable = true
+  Astro.response.headers.set('Cache-Control', 'no-store')
+}
 const tags = getTagEntries(posts)
-const firstYear = posts.at(-1)?.data.pubDate.getFullYear() ?? new Date().getFullYear()
+const firstYear = posts.at(-1)?.data.pubDate.getFullYear()
 ---
 
 <BlogLayout
@@ -30,9 +38,9 @@ const firstYear = posts.at(-1)?.data.pubDate.getFullYear() ?? new Date().getFull
     </div>
 
     <dl class="blogAboutStats">
-      <div><dt>文章</dt><dd>{String(posts.length).padStart(2, '0')}</dd></div>
-      <div><dt>标签</dt><dd>{String(tags.length).padStart(2, '0')}</dd></div>
-      <div><dt>开始记录</dt><dd>{firstYear}</dd></div>
+      <div><dt>文章</dt><dd>{statsUnavailable ? '暂不可用' : String(posts.length).padStart(2, '0')}</dd></div>
+      <div><dt>标签</dt><dd>{statsUnavailable ? '暂不可用' : String(tags.length).padStart(2, '0')}</dd></div>
+      <div><dt>开始记录</dt><dd>{statsUnavailable ? '暂不可用' : firstYear ?? '—'}</dd></div>
     </dl>
   </section>
 </BlogLayout>

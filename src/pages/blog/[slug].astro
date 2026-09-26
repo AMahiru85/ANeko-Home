@@ -1,32 +1,74 @@
 ---
 import BlogToc from '../../components/BlogToc.astro'
+import BlogUnavailable from '../../components/BlogUnavailable.astro'
 import BlogLayout from '../../layouts/BlogLayout.astro'
 import { renderBlogMarkdown } from '../../utils/blog-markdown'
-import { formatPostDate, getBlogPost, getPublishedPosts, getReadingTime, tagToSlug } from '../../utils/posts'
+import { BlogDataUnavailableError, formatPostDate, getBlogPost, getPublishedPosts, getReadingTime, tagToSlug } from '../../utils/posts'
 
 export const prerender = false
 
 const slug = Astro.params.slug || ''
-const [post, allPosts] = await Promise.all([
+let post: Awaited<ReturnType<typeof getBlogPost>> = null
+let allPosts: Awaited<ReturnType<typeof getPublishedPosts>> = []
+let blogUnavailable = false
+const [postResult, listResult] = await Promise.allSettled([
   getBlogPost(slug),
   getPublishedPosts(),
 ])
-const rendered = post?.body ? await renderBlogMarkdown(post.body) : null
+
+if (postResult.status === 'fulfilled') {
+  post = postResult.value
+} else {
+  if (!(postResult.reason instanceof BlogDataUnavailableError)) throw postResult.reason
+  blogUnavailable = true
+}
+
+// Navigation is optional: a list failure must not hide an available article.
+if (listResult.status === 'fulfilled') {
+  allPosts = listResult.value
+} else {
+  console.warn('[blog] next article navigation unavailable', {
+    errorType: listResult.reason instanceof Error ? listResult.reason.name : typeof listResult.reason,
+  })
+}
+
+let rendered: Awaited<ReturnType<typeof renderBlogMarkdown>> | null = null
+if (post) {
+  if (typeof post.body !== 'string') {
+    blogUnavailable = true
+  } else {
+    try {
+      rendered = await renderBlogMarkdown(post.body)
+    } catch (error) {
+      blogUnavailable = true
+      console.error('[blog] article rendering failed', {
+        errorType: error instanceof Error ? error.name : typeof error,
+      })
+    }
+  }
+}
+
 const postIndex = post ? allPosts.findIndex((item) => item.id === post.id) : -1
 const nextPost = post && postIndex >= 0 && allPosts.length > 1
   ? allPosts[(postIndex + 1) % allPosts.length]
   : null
 
-if (!post) Astro.response.status = 404
+if (blogUnavailable) {
+  Astro.response.status = 503
+  Astro.response.headers.set('Cache-Control', 'no-store')
+  Astro.response.headers.set('Retry-After', '60')
+} else if (!post) {
+  Astro.response.status = 404
+}
 ---
 
 <BlogLayout
   title="ANeko - Home | 博客"
-  description={post?.data.description || '未找到请求的博客文章。'}
+  description={post?.data.description || (blogUnavailable ? '博客文章暂时无法读取。' : '未找到请求的博客文章。')}
   keywords={post ? `ANeko,个人博客,${post.data.tags.join(',')}` : 'ANeko,个人博客'}
   image={post?.data.heroImage}
-  noindex={!post}
-  article={post ? {
+  noindex={!blogUnavailable && !post}
+  article={post && !blogUnavailable ? {
     headline: post.data.title,
     publishedTime: post.data.pubDate.toISOString(),
     modifiedTime: post.data.updatedDate?.toISOString(),
@@ -100,10 +142,12 @@ if (!post) Astro.response.status = 404
     </article>
   ) : (
     <section class="blogIndex blogListingPage">
-      <div class="blogEmptyState">
-        <h1>文章不存在</h1>
-        <p>这篇文章尚未发布，或已经从 R2 中移除。</p>
-      </div>
+      {blogUnavailable ? <BlogUnavailable /> : (
+        <div class="blogEmptyState">
+          <h1>文章不存在</h1>
+          <p>这篇文章尚未发布，或已经移除。</p>
+        </div>
+      )}
     </section>
   )}
 </BlogLayout>

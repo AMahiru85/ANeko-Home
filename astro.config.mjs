@@ -8,6 +8,9 @@ import { remarkGithubCard } from './src/plugins/remark-github-card.mjs'
 export default defineConfig({
   integrations: [vue()],
   output: 'server',
+  // This site's Cloudflare deployment rejects Sec-Purpose: prefetch requests.
+  // Keep client navigation, but only fetch a page when the visitor opens it.
+  prefetch: false,
   adapter: cloudflare({
     imageService: 'passthrough',
     persistState: true,

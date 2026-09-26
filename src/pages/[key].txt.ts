@@ -1,11 +1,12 @@
 import type { APIRoute } from 'astro'
 import { getBindings, getIndexNowKey } from '../utils/cloudflare'
+import { isValidIndexNowKey } from '../utils/indexnow'
 
 export const prerender = false
 
 export const GET: APIRoute = async ({ params }) => {
   const key = getIndexNowKey(getBindings())
-  if (!key || params.key !== key) {
+  if (!isValidIndexNowKey(key) || params.key !== key) {
     return new Response('Not found', {
       status: 404,
       headers: {

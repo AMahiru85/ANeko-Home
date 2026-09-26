@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getPublishedPosts, getTagEntries, POSTS_PER_PAGE, type BlogPost } from '../utils/posts'
+import { BlogDataUnavailableError, getPublishedPosts, getTagEntries, POSTS_PER_PAGE, type BlogPost } from '../utils/posts'
 import { SITE_ORIGIN } from '../utils/runtime-config'
 
 export const prerender = false
@@ -35,7 +35,20 @@ function renderEntry(entry: SitemapEntry) {
 }
 
 export const GET: APIRoute = async () => {
-  const posts = await getPublishedPosts()
+  let posts: Awaited<ReturnType<typeof getPublishedPosts>>
+  try {
+    posts = await getPublishedPosts()
+  } catch (error) {
+    if (!(error instanceof BlogDataUnavailableError)) throw error
+    return new Response('站点地图暂时无法生成，请稍后重试。', {
+      status: 503,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Retry-After': '60',
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    })
+  }
   const blogLastModified = getLastModified(posts)
   const entries: SitemapEntry[] = [
     { path: '/' },

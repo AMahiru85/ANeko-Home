@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { getPublishedPosts } from '../utils/posts'
+import { BlogDataUnavailableError, getPublishedPosts } from '../utils/posts'
 import { SITE_ORIGIN } from '../utils/runtime-config'
 
 export const prerender = false
@@ -15,7 +15,20 @@ function escapeXml(value: string) {
 }
 
 export const GET: APIRoute = async () => {
-  const posts = await getPublishedPosts()
+  let posts: Awaited<ReturnType<typeof getPublishedPosts>>
+  try {
+    posts = await getPublishedPosts()
+  } catch (error) {
+    if (!(error instanceof BlogDataUnavailableError)) throw error
+    return new Response('RSS 订阅暂时无法生成，请稍后重试。', {
+      status: 503,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Retry-After': '60',
+        'Content-Type': 'text/plain; charset=utf-8',
+      },
+    })
+  }
   const items = posts.map((post) => {
     const link = new URL(`/blog/${encodeURIComponent(post.id)}/`, SITE_ORIGIN).href
     return [

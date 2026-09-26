@@ -2,11 +2,22 @@
 import BlogPagination from '../../components/BlogPagination.astro'
 import BlogPostList from '../../components/BlogPostList.astro'
 import BlogLayout from '../../layouts/BlogLayout.astro'
-import { formatPostDate, getPublishedPosts, getReadingTime, getTagEntries, POSTS_PER_PAGE } from '../../utils/posts'
+import BlogUnavailable from '../../components/BlogUnavailable.astro'
+import { BlogDataUnavailableError, formatPostDate, getPublishedPosts, getReadingTime, getTagEntries, POSTS_PER_PAGE } from '../../utils/posts'
 
 export const prerender = false
 
-const allPosts = await getPublishedPosts()
+let allPosts: Awaited<ReturnType<typeof getPublishedPosts>> = []
+let blogUnavailable = false
+try {
+  allPosts = await getPublishedPosts()
+} catch (error) {
+  if (!(error instanceof BlogDataUnavailableError)) throw error
+  blogUnavailable = true
+  Astro.response.status = 503
+  Astro.response.headers.set('Cache-Control', 'no-store')
+  Astro.response.headers.set('Retry-After', '60')
+}
 const pagePosts = allPosts.slice(0, POSTS_PER_PAGE)
 const featuredPost = pagePosts.find((post) => post.data.featured) ?? pagePosts[0]
 const morePosts = featuredPost ? pagePosts.filter((post) => post.id !== featuredPost.id) : []
@@ -20,7 +31,7 @@ const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
   keywords="ANeko,个人博客,开发,Astro,Vue,Cloudflare"
 >
   <section class="blogIndex" aria-labelledby="blog-index-title">
-    {featuredPost ? (
+    {blogUnavailable ? <BlogUnavailable titleId="blog-index-title" /> : featuredPost ? (
       <>
         <a class="blogFeatured" href={`/blog/${featuredPost.id}/`}>
           <div class="blogFeaturedMain">
@@ -73,7 +84,7 @@ const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
     ) : (
       <div class="blogEmptyState">
         <h2 id="blog-index-title">暂时没有文章</h2>
-        <p>文章写入 Cloudflare KV 和 R2 后会显示在这里。</p>
+        <p>发布的文章会显示在这里。</p>
       </div>
     )}
   </section>

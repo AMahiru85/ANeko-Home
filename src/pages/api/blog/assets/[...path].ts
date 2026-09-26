@@ -3,6 +3,7 @@ import { verifyAdminRequest } from '../../../../utils/auth'
 import { BLOG_ASSET_PREFIX, getBindings } from '../../../../utils/cloudflare'
 import { errorResponse, r2ObjectResponse, successResponse } from '../../../../utils/http'
 import { joinObjectPath, normalizeObjectPath } from '../../../../utils/r2'
+import { readBlogStorage } from '../../../../utils/blog-storage'
 
 export const prerender = false
 
@@ -11,12 +12,19 @@ function getKey(path?: string) {
 }
 
 export const GET: APIRoute = async ({ params }) => {
+  let key: string
   try {
-    const object = await getBindings().ANEKO_R2.get(getKey(params.path))
-    if (!object) return errorResponse('未找到附件', 404)
-    return r2ObjectResponse(object, { cacheControl: 'public, max-age=31536000, immutable' })
+    key = getKey(params.path)
   } catch {
     return errorResponse('附件路径无效')
+  }
+  try {
+    const object = await readBlogStorage(() => getBindings().ANEKO_R2.get(key))
+    if (!object) return errorResponse('未找到附件', 404)
+    return r2ObjectResponse(object, { cacheControl: 'public, max-age=31536000, immutable' })
+  } catch (error) {
+    console.error('[blog] asset read failed', { errorType: error instanceof Error ? error.name : typeof error })
+    return errorResponse('附件暂时无法读取，请稍后重试', 503)
   }
 }
 
@@ -26,10 +34,15 @@ export const PUT: APIRoute = async ({ params, request }) => {
     return errorResponse('未授权访问，请重新验证', 401)
   }
 
+  let path: string
   try {
-    const path = normalizeObjectPath(params.path || '')
-    if (!request.body) return errorResponse('请求内容不能为空')
+    path = normalizeObjectPath(params.path || '')
+  } catch {
+    return errorResponse('附件路径无效')
+  }
+  if (!request.body) return errorResponse('请求内容不能为空')
 
+  try {
     await bindings.ANEKO_R2.put(`${BLOG_ASSET_PREFIX}${path}`, request.body, {
       httpMetadata: {
         contentType: request.headers.get('Content-Type') || 'application/octet-stream',
@@ -37,7 +50,8 @@ export const PUT: APIRoute = async ({ params, request }) => {
     })
     return successResponse({ path: `/api/blog/assets/${path}` })
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : '附件上传失败')
+    console.error('[blog] asset upload failed', { errorType: error instanceof Error ? error.name : typeof error })
+    return errorResponse('附件暂时无法上传，请稍后重试', 503)
   }
 }
 
@@ -47,11 +61,17 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     return errorResponse('未授权访问，请重新验证', 401)
   }
 
+  let path: string
   try {
-    const path = normalizeObjectPath(params.path || '')
+    path = normalizeObjectPath(params.path || '')
+  } catch {
+    return errorResponse('附件路径无效')
+  }
+  try {
     await bindings.ANEKO_R2.delete(`${BLOG_ASSET_PREFIX}${path}`)
     return successResponse({ deleted: path })
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : '附件删除失败')
+    console.error('[blog] asset deletion failed', { errorType: error instanceof Error ? error.name : typeof error })
+    return errorResponse('附件暂时无法删除，请稍后重试', 503)
   }
 }

@@ -12,5 +12,9 @@ export const GET: APIRoute = async ({ request }) => {
     return errorResponse('未授权访问，请重新验证', 401)
   }
 
-  return successResponse(await getStoredPostIndex())
+  try {
+    return successResponse(await getStoredPostIndex({ refresh: true, allowStale: false }))
+  } catch {
+    return errorResponse('博客文章列表暂时无法读取，请稍后重试', 503)
+  }
 }

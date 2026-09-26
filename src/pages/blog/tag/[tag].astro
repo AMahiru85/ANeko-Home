@@ -1,38 +1,53 @@
 ---
 import BlogPostList from '../../../components/BlogPostList.astro'
+import BlogUnavailable from '../../../components/BlogUnavailable.astro'
 import BlogLayout from '../../../layouts/BlogLayout.astro'
-import { getPublishedPosts, getTagEntries } from '../../../utils/posts'
+import { BlogDataUnavailableError, getPublishedPosts, getTagEntries } from '../../../utils/posts'
 
 export const prerender = false
 
-const allPosts = await getPublishedPosts()
+let allPosts: Awaited<ReturnType<typeof getPublishedPosts>> = []
+let blogUnavailable = false
+try {
+  allPosts = await getPublishedPosts()
+} catch (error) {
+  if (!(error instanceof BlogDataUnavailableError)) throw error
+  blogUnavailable = true
+  Astro.response.status = 503
+  Astro.response.headers.set('Cache-Control', 'no-store')
+  Astro.response.headers.set('Retry-After', '60')
+}
 const tagEntry = getTagEntries(allPosts).find((entry) => entry.slug === Astro.params.tag)
-const tag = tagEntry?.tag || '未找到该标签'
+const tag = tagEntry?.tag || (blogUnavailable ? '暂时无法读取' : '未找到该标签')
 const posts = tagEntry ? allPosts.filter((post) => post.data.tags.includes(tagEntry.tag)) : []
-if (!tagEntry) Astro.response.status = 404
+if (!blogUnavailable && !tagEntry) Astro.response.status = 404
 ---
 
 <BlogLayout
   title="ANeko - Home | 博客"
-  description={tagEntry ? `浏览 ANeko - Home 博客中与 ${tag} 相关的文章，集中查看该主题下的开发实践、技术笔记与日常记录。` : '未找到该文章标签'}
-  noindex={!tagEntry}
+  description={tagEntry ? `浏览 ANeko - Home 博客中与 ${tag} 相关的文章，集中查看该主题下的开发实践、技术笔记与日常记录。` : blogUnavailable ? '博客文章标签暂时无法读取，请稍后重试。' : '未找到该文章标签'}
+  noindex={!blogUnavailable && !tagEntry}
   compactHeader
 >
   <section class="blogIndex blogListingPage" aria-labelledby="tag-page-title">
-    <header class="blogListHeader">
-      <div>
-        <p>文章主题</p>
-        <h1 id="tag-page-title">#{tag}</h1>
-      </div>
-      <a href="/blog/">全部文章</a>
-    </header>
-    {posts.length > 0 ? (
-      <BlogPostList posts={posts} />
-    ) : (
-      <div class="blogEmptyState">
-        <h2>没有可显示的文章</h2>
-        <p>返回文章列表浏览其他内容</p>
-      </div>
+    {blogUnavailable ? <BlogUnavailable titleId="tag-page-title" /> : (
+      <>
+        <header class="blogListHeader">
+          <div>
+            <p>文章主题</p>
+            <h1 id="tag-page-title">#{tag}</h1>
+          </div>
+          <a href="/blog/">全部文章</a>
+        </header>
+        {posts.length > 0 ? (
+          <BlogPostList posts={posts} />
+        ) : (
+          <div class="blogEmptyState">
+            <h2>没有可显示的文章</h2>
+            <p>返回文章列表浏览其他内容</p>
+          </div>
+        )}
+      </>
     )}
   </section>
 </BlogLayout>

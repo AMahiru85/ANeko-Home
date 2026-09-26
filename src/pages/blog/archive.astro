@@ -1,10 +1,21 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro'
-import { formatPostDate, getPublishedPosts, getTagEntries } from '../../utils/posts'
+import BlogUnavailable from '../../components/BlogUnavailable.astro'
+import { BlogDataUnavailableError, formatPostDate, getPublishedPosts, getTagEntries } from '../../utils/posts'
 
 export const prerender = false
 
-const allPosts = await getPublishedPosts()
+let allPosts: Awaited<ReturnType<typeof getPublishedPosts>> = []
+let blogUnavailable = false
+try {
+  allPosts = await getPublishedPosts()
+} catch (error) {
+  if (!(error instanceof BlogDataUnavailableError)) throw error
+  blogUnavailable = true
+  Astro.response.status = 503
+  Astro.response.headers.set('Cache-Control', 'no-store')
+  Astro.response.headers.set('Retry-After', '60')
+}
 const years = new Map<number, typeof allPosts>()
 
 for (const post of allPosts) {
@@ -28,10 +39,10 @@ const tagCount = getTagEntries(allPosts).length
         <p>文章归档</p>
         <h1 id="archive-title">文章归档</h1>
       </div>
-      <span>{allPosts.length} 篇文章 / {tagCount} 个标签</span>
+      {!blogUnavailable && <span>{allPosts.length} 篇文章 / {tagCount} 个标签</span>}
     </header>
 
-    {archiveYears.length > 0 ? archiveYears.map(([year, posts]) => (
+    {blogUnavailable ? <BlogUnavailable /> : archiveYears.length > 0 ? archiveYears.map(([year, posts]) => (
       <section class="blogArchiveYear">
         <div class="blogArchiveYearLabel">
           <h2>{year}</h2>

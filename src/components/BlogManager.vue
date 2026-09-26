@@ -18,7 +18,7 @@
         </button>
         <button type="button" :disabled="!isAuthenticated || indexNowSubmitting" title="向搜索引擎提交公开页面" @click="submitSiteToIndexNow">
           <Send :size="15" :stroke-width="1.8" aria-hidden="true" />
-          <span>提交收录</span>
+          <span>{{ indexNowSubmitting ? '正在提交…' : '提交收录' }}</span>
         </button>
         <button
           type="button"
@@ -400,11 +400,13 @@ async function submitSiteToIndexNow() {
   if (!accessCode.value || indexNowSubmitting.value) return
   indexNowSubmitting.value = true
   try {
-    const result = await apiRequest<{ submitted: number }>('/api/admin/indexnow', {
+    const result = await apiRequest<{ submitted: number; accepted: number; pending: number }>('/api/admin/indexnow', {
       method: 'POST',
       headers: authHeaders(),
     })
-    showNotice(`已向 IndexNow 提交 ${result.submitted} 个公开页面`)
+    showNotice(result.pending > 0
+      ? `IndexNow 已接收 ${result.submitted} 个公开页面，其中 ${result.pending} 个正在等待密钥验证。无需立即重复提交，收录由搜索引擎决定。`
+      : `IndexNow 已接收 ${result.submitted} 个公开页面。收录由搜索引擎决定。`)
   } catch (error) {
     showNotice(userErrorMessage(error, 'IndexNow 提交失败，请稍后重试。'), 'error')
   } finally {
@@ -526,11 +528,13 @@ async function deletePost(post: StoredBlogPost) {
   if (!window.confirm(`确定删除“${post.title}”吗？正文和文章目录内的附件也会被删除。`)) return
 
   try {
-    await apiRequest(`/api/admin/blog/${encodeURIComponent(post.slug)}`, {
+    const result = await apiRequest<{ deleted: string; cleanupPending?: boolean }>(`/api/admin/blog/${encodeURIComponent(post.slug)}`, {
       method: 'DELETE',
       headers: authHeaders(),
     })
-    showNotice('文章已删除')
+    showNotice(result.cleanupPending
+      ? '文章已下线，部分正文或附件清理失败，请稍后检查存储。'
+      : '文章已删除', result.cleanupPending ? 'error' : 'success')
     await loadPosts()
   } catch (error) {
     showNotice(userErrorMessage(error, '删除失败，请稍后重试。'), 'error')

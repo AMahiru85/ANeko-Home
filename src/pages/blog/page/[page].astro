@@ -1,17 +1,31 @@
 ---
 import BlogPagination from '../../../components/BlogPagination.astro'
 import BlogPostList from '../../../components/BlogPostList.astro'
+import BlogUnavailable from '../../../components/BlogUnavailable.astro'
 import BlogLayout from '../../../layouts/BlogLayout.astro'
-import { getPublishedPosts, POSTS_PER_PAGE } from '../../../utils/posts'
+import { BlogDataUnavailableError, getPublishedPosts, POSTS_PER_PAGE } from '../../../utils/posts'
 
 export const prerender = false
 
-const currentPage = Number.parseInt(Astro.params.page || '', 10)
-if (!Number.isInteger(currentPage) || currentPage < 2) return Astro.redirect('/blog/', 308)
+const pageParam = Astro.params.page || ''
+const currentPage = Number(pageParam)
+if (!/^\d+$/.test(pageParam) || !Number.isSafeInteger(currentPage) || currentPage < 2) {
+  return Astro.redirect('/blog/', 308)
+}
 
-const allPosts = await getPublishedPosts()
+let allPosts: Awaited<ReturnType<typeof getPublishedPosts>> = []
+let blogUnavailable = false
+try {
+  allPosts = await getPublishedPosts()
+} catch (error) {
+  if (!(error instanceof BlogDataUnavailableError)) throw error
+  blogUnavailable = true
+  Astro.response.status = 503
+  Astro.response.headers.set('Cache-Control', 'no-store')
+  Astro.response.headers.set('Retry-After', '60')
+}
 const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
-if (currentPage > totalPages) return Astro.redirect('/blog/', 308)
+if (!blogUnavailable && currentPage > totalPages) return Astro.redirect('/blog/', 308)
 
 const startIndex = (currentPage - 1) * POSTS_PER_PAGE
 const pagePosts = allPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
@@ -23,14 +37,18 @@ const pagePosts = allPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
   compactHeader
 >
   <section class="blogIndex blogListingPage" aria-labelledby="blog-page-title">
-    <header class="blogListHeader">
-      <div>
-        <p>文章列表 / {String(currentPage).padStart(2, '0')}</p>
-        <h1 id="blog-page-title">文章列表</h1>
-      </div>
-      <span>第 {currentPage} 页 / 共 {totalPages} 页</span>
-    </header>
-    <BlogPostList posts={pagePosts} startIndex={startIndex} />
-    <BlogPagination currentPage={currentPage} totalPages={totalPages} />
+    {blogUnavailable ? <BlogUnavailable titleId="blog-page-title" /> : (
+      <>
+        <header class="blogListHeader">
+          <div>
+            <p>文章列表 / {String(currentPage).padStart(2, '0')}</p>
+            <h1 id="blog-page-title">文章列表</h1>
+          </div>
+          <span>第 {currentPage} 页 / 共 {totalPages} 页</span>
+        </header>
+        <BlogPostList posts={pagePosts} startIndex={startIndex} />
+        <BlogPagination currentPage={currentPage} totalPages={totalPages} />
+      </>
+    )}
   </section>
 </BlogLayout>

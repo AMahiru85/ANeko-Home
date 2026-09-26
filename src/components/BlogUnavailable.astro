@@ -1,0 +1,23 @@
+---
+interface Props {
+  titleId?: string
+}
+
+const { titleId } = Astro.props
+const retryUrl = `${Astro.url.pathname}${Astro.url.search}`
+---
+
+<div class="blogEmptyState" role="status">
+  <h2 id={titleId}>博客内容暂时无法读取</h2>
+  <p>内容加载遇到了临时问题，请稍后重试。</p>
+  <a class="blogRetryLink" href={retryUrl} data-astro-reload>重新加载</a>
+</div>
+
+<style>
+  .blogRetryLink {
+    display: inline-block;
+    margin-top: 1rem;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+</style>
