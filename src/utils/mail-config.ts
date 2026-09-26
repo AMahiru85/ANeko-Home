@@ -122,7 +122,7 @@ export class MailConfigConflictError extends Error {
 
 export class MailConfigUnavailableError extends Error {
   constructor() {
-    super('Mail configuration is unavailable')
+    super('邮箱配置暂不可用')
     this.name = 'MailConfigUnavailableError'
   }
 }
@@ -162,7 +162,7 @@ function validationError(message: string): never {
 
 function asRecord(value: unknown, field: string): JsonRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    validationError(`${field} must be an object`)
+    validationError(`${field} 必须是对象`)
   }
   return value as JsonRecord
 }
@@ -170,7 +170,7 @@ function asRecord(value: unknown, field: string): JsonRecord {
 function assertKnownKeys(input: JsonRecord, allowed: readonly string[], field: string) {
   const allowedKeys = new Set(allowed)
   const unexpected = Object.keys(input).find((key) => !allowedKeys.has(key))
-  if (unexpected) validationError(`${field}.${unexpected} is not supported`)
+  if (unexpected) validationError(`${field}.${unexpected} 是不支持的字段`)
 }
 
 function textField(
@@ -180,11 +180,11 @@ function textField(
   options: { maxLength: number; allowEmpty?: boolean } = { maxLength: 254 },
 ) {
   const value = input[key]
-  if (typeof value !== 'string') validationError(`${field}.${key} must be a string`)
+  if (typeof value !== 'string') validationError(`${field}.${key} 必须是文本`)
   const normalized = value.trim()
-  if (!options.allowEmpty && !normalized) validationError(`${field}.${key} is required`)
+  if (!options.allowEmpty && !normalized) validationError(`${field}.${key} 不能为空`)
   if (normalized.length > options.maxLength || CONTROL_CHARACTER_PATTERN.test(normalized)) {
-    validationError(`${field}.${key} is invalid`)
+    validationError(`${field}.${key} 无效`)
   }
   return normalized
 }
@@ -192,7 +192,7 @@ function textField(
 function normalizeEmail(value: string, field: string) {
   const normalized = value.toLowerCase()
   if (normalized.length > 254 || !EMAIL_PATTERN.test(normalized)) {
-    validationError(`${field} must be a valid email address`)
+    validationError(`${field} 必须是有效的邮箱地址`)
   }
   return normalized
 }
@@ -202,7 +202,7 @@ function normalizeHostname(value: string, field: string) {
   if (!HOSTNAME_PATTERN.test(hostname)
     || /^\d+(?:\.\d+){3}$/.test(hostname)
     || UNSAFE_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))) {
-    validationError(`${field} must be a public DNS hostname`)
+    validationError(`${field} 必须是公开的 DNS 主机名`)
   }
   return hostname
 }
@@ -210,14 +210,14 @@ function normalizeHostname(value: string, field: string) {
 function passwordField(input: JsonRecord, existing: string, field: string, endpointChanged: boolean) {
   if (!Object.prototype.hasOwnProperty.call(input, 'password')) {
     if (existing && endpointChanged) {
-      validationError(`${field}.password is required when host or username changes`)
+      validationError(`修改主机或用户名时，必须重新填写 ${field}.password`)
     }
     return existing
   }
   const value = input.password
   if (value === null) return ''
   if (typeof value !== 'string' || !value || value.length > MAX_PASSWORD_LENGTH) {
-    validationError(`${field}.password must be omitted, null, or a non-empty string`)
+    validationError(`${field}.password 必须省略、设为 null 或填写非空文本`)
   }
   return value
 }
@@ -230,7 +230,7 @@ function normalizeConnection(
   const input = asRecord(value, field)
   assertKnownKeys(input, ['host', 'port', 'username', 'password', 'passwordConfigured'], field)
   const expectedPort = field === 'imap' ? 993 : 465
-  if (input.port !== expectedPort) validationError(`${field}.port must be ${expectedPort}`)
+  if (input.port !== expectedPort) validationError(`${field}.port 必须为 ${expectedPort}`)
 
   const host = normalizeHostname(textField(input, 'host', field, { maxLength: 253 }), `${field}.host`)
   const username = textField(input, 'username', field, { maxLength: 320 })
@@ -245,10 +245,10 @@ function normalizeConnection(
 }
 
 function normalizeWebhookRecipients(value: unknown, field: string) {
-  if (!Array.isArray(value)) validationError(`${field} must be an array`)
+  if (!Array.isArray(value)) validationError(`${field} 必须是列表`)
   const recipients: string[] = []
   for (const item of value) {
-    if (typeof item !== 'string') validationError(`${field} must contain email addresses`)
+    if (typeof item !== 'string') validationError(`${field} 中必须填写邮箱地址`)
     const email = normalizeEmail(item.trim(), field)
     if (!recipients.includes(email)) recipients.push(email)
   }
@@ -258,12 +258,12 @@ function normalizeWebhookRecipients(value: unknown, field: string) {
 function webhookTokenField(input: JsonRecord, existing: string) {
   if (!Object.prototype.hasOwnProperty.call(input, 'token')) return existing
   if (input.token === null) return ''
-  if (typeof input.token !== 'string') validationError('webhook.token must be a string or null')
+  if (typeof input.token !== 'string') validationError('webhook.token 必须是文本或 null')
   const token = input.token.trim()
   if (token.length < MIN_WEBHOOK_TOKEN_LENGTH
     || token.length > MAX_WEBHOOK_TOKEN_LENGTH
     || !WEBHOOK_TOKEN_PATTERN.test(token)) {
-    validationError(`webhook.token must be between ${MIN_WEBHOOK_TOKEN_LENGTH} and ${MAX_WEBHOOK_TOKEN_LENGTH} characters`)
+    validationError(`webhook.token 长度必须在 ${MIN_WEBHOOK_TOKEN_LENGTH} 到 ${MAX_WEBHOOK_TOKEN_LENGTH} 个字符之间`)
   }
   return token
 }
@@ -275,26 +275,26 @@ function webhookTemplateField(
 ) {
   const value = input[key]
   if (typeof value !== 'string' || !value.trim() || value.length > maxLength) {
-    validationError(`webhook.${key} is invalid`)
+    validationError(`webhook.${key} 无效`)
   }
   if (key === 'subject' && CONTROL_CHARACTER_PATTERN.test(value)) {
-    validationError('webhook.subject must be a single line')
+    validationError('webhook.subject 必须为单行文本')
   }
   return key === 'subject' ? value.trim() : value
 }
 
 function webhookId(value: unknown, field: string) {
   if (typeof value !== 'string' || !WEBHOOK_ID_PATTERN.test(value)) {
-    validationError(`${field} must be 1-64 letters, digits, dots, underscores, or hyphens`)
+    validationError(`${field} 长度须为 1–64 个字符，且只能包含字母、数字、点、下划线或连字符`)
   }
   return value
 }
 
 function webhookName(value: unknown, field: string) {
-  if (typeof value !== 'string') validationError(`${field} must be a string`)
+  if (typeof value !== 'string') validationError(`${field} 必须是文本`)
   const normalized = value.trim()
   if (!normalized || normalized.length > MAX_WEBHOOK_NAME_LENGTH || CONTROL_CHARACTER_PATTERN.test(normalized)) {
-    validationError(`${field} is invalid`)
+    validationError(`${field} 无效`)
   }
   return normalized
 }
@@ -319,27 +319,27 @@ function normalizeWebhookEndpoint(
   const input = asRecord(value, 'endpoint')
   assertKnownKeys(input, ['id', 'name', 'enabled', 'token', 'to', 'cc', 'templateId'], 'endpoint')
   const id = webhookId(input.id, 'endpoint.id')
-  if (typeof input.enabled !== 'boolean') validationError('endpoint.enabled must be a boolean')
+  if (typeof input.enabled !== 'boolean') validationError('endpoint.enabled 必须是布尔值')
   const token = webhookTokenField(input, existing?.token || '')
   const to = normalizeWebhookRecipients(input.to, 'endpoint.to')
   const cc = normalizeWebhookRecipients(input.cc, 'endpoint.cc')
-  if (to.length + cc.length > MAX_WEBHOOK_RECIPIENTS) validationError(`endpoint supports at most ${MAX_WEBHOOK_RECIPIENTS} recipients`)
+  if (to.length + cc.length > MAX_WEBHOOK_RECIPIENTS) validationError(`endpoint 收件人数不能超过 ${MAX_WEBHOOK_RECIPIENTS} 个`)
   if (typeof input.templateId !== 'string' || !templateIds.has(input.templateId)) {
-    validationError('endpoint.templateId must reference an existing template')
+    validationError('endpoint.templateId 必须关联已存在的模板')
   }
-  if (input.enabled && (!token || !to.length)) validationError('enabled endpoint requires a token and at least one recipient')
+  if (input.enabled && (!token || !to.length)) validationError('启用接口前必须设置访问令牌和至少一个收件人')
   return { id, name: webhookName(input.name, 'endpoint.name'), enabled: input.enabled, token, to, cc, templateId: input.templateId }
 }
 
 function normalizeWebhookStore(value: unknown, existing: MailWebhookStore): MailWebhookStore {
   const input = asRecord(value, 'body')
   assertKnownKeys(input, ['revision', 'templates', 'endpoints'], 'body')
-  if (!Array.isArray(input.templates) || input.templates.length > MAX_WEBHOOK_ITEMS) validationError(`body.templates must contain at most ${MAX_WEBHOOK_ITEMS} items`)
-  if (!Array.isArray(input.endpoints) || input.endpoints.length > MAX_WEBHOOK_ITEMS) validationError(`body.endpoints must contain at most ${MAX_WEBHOOK_ITEMS} items`)
+  if (!Array.isArray(input.templates) || input.templates.length > MAX_WEBHOOK_ITEMS) validationError(`body.templates 最多只能包含 ${MAX_WEBHOOK_ITEMS} 个项目`)
+  if (!Array.isArray(input.endpoints) || input.endpoints.length > MAX_WEBHOOK_ITEMS) validationError(`body.endpoints 最多只能包含 ${MAX_WEBHOOK_ITEMS} 个项目`)
   const templates = input.templates.map((item) => normalizeWebhookTemplate(item))
   const templateIds = new Set<string>()
   for (const template of templates) {
-    if (templateIds.has(template.id)) validationError(`template.${template.id} is duplicated`)
+    if (templateIds.has(template.id)) validationError(`template.${template.id} 重复`)
     templateIds.add(template.id)
   }
   const existingEndpoints = new Map(existing.endpoints.map((item) => [item.id, item]))
@@ -350,11 +350,11 @@ function normalizeWebhookStore(value: unknown, existing: MailWebhookStore): Mail
   })
   const endpointIds = new Set<string>()
   for (const endpoint of endpoints) {
-    if (endpointIds.has(endpoint.id)) validationError(`endpoint.${endpoint.id} is duplicated`)
+    if (endpointIds.has(endpoint.id)) validationError(`endpoint.${endpoint.id} 重复`)
     endpointIds.add(endpoint.id)
   }
-  if (!templateIds.has('default')) validationError('the default template is required')
-  if (!endpointIds.has('default')) validationError('the default endpoint is required')
+  if (!templateIds.has('default')) validationError('必须保留默认模板')
+  if (!endpointIds.has('default')) validationError('必须保留默认接口')
   return { revision: existing.revision, updatedAt: existing.updatedAt, templates, endpoints }
 }
 
@@ -411,11 +411,11 @@ function normalizeConfiguration(value: unknown, existing: MailConfiguration): Ma
 function parseExpectedRevision(value: unknown) {
   const input = asRecord(value, 'body')
   if (!Object.prototype.hasOwnProperty.call(input, 'revision')) {
-    validationError('body.revision is required')
+    validationError('body.revision 不能为空')
   }
   if (input.revision !== null
     && (typeof input.revision !== 'string' || !UUID_PATTERN.test(input.revision))) {
-    validationError('body.revision must be a valid revision or null')
+    validationError('body.revision 必须是有效版本号或 null')
   }
   return input.revision as string | null
 }
@@ -435,7 +435,7 @@ function validateMailHostsAllowed(bindings: MailBindings, configuration: MailCon
   if (!allowed.size) return
   for (const connection of [configuration.imap, configuration.smtp]) {
     if (!allowed.has(connection.host)) {
-      validationError('A mail server is not in MAIL_ALLOWED_HOSTS')
+      validationError('邮箱服务器不在 MAIL_ALLOWED_HOSTS 允许列表中')
     }
   }
 }
@@ -622,7 +622,7 @@ export async function saveMailWebhookStore(bindings: MailBindings, value: unknow
   const existing = await readMailWebhookStore(bindings)
   const expectedRevision = parseExpectedRevision(value)
   if (expectedRevision !== existing.revision) {
-    throw new MailConfigConflictError('Webhook configuration has changed; reload and try again')
+      throw new MailConfigConflictError('Webhook 配置已更改，请刷新后重试')
   }
   const input = asRecord(value, 'body')
   const storeInput = Object.prototype.hasOwnProperty.call(input, 'templates')

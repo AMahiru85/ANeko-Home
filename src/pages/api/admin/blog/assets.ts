@@ -9,11 +9,11 @@ export const prerender = false
 export const GET: APIRoute = async ({ request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   const slug = new URL(request.url).searchParams.get('slug')?.trim() || ''
-  if (!BLOG_SLUG_PATTERN.test(slug)) return errorResponse('Invalid article slug')
+  if (!BLOG_SLUG_PATTERN.test(slug)) return errorResponse('文章路径（Slug）无效')
 
   const prefix = `${BLOG_ASSET_PREFIX}${slug}/`
   const assets: Array<{

@@ -28,10 +28,10 @@ export async function adminMailRoute(context: Parameters<APIRoute>[0], handler: 
     if (!['GET', 'HEAD', 'OPTIONS'].includes(context.request.method)) {
       const requestUrl = new URL(context.request.url)
       const origin = context.request.headers.get('Origin')
-      if (origin && origin !== requestUrl.origin) return mailError('Forbidden', 403)
+      if (origin && origin !== requestUrl.origin) return mailError('禁止跨站访问', 403)
     }
     if (!await verifyAdminRequest(context.request, bindings)) {
-      return mailError('Unauthorized', 401)
+      return mailError('未授权访问，请重新验证', 401)
     }
     return await handler(context, bindings)
   } catch (error) {
@@ -52,9 +52,9 @@ export function mailExceptionResponse(error: unknown) {
     return mailError(error.message, 429, { 'Retry-After': String(error.retryAfter) })
   }
   if (error instanceof MailConfigUnavailableError || error instanceof MailServiceUnavailableError) {
-    return mailError('Mail service is unavailable', 503)
+    return mailError('邮箱服务暂时不可用', 503)
   }
-  return mailError('Mail operation failed', 500)
+  return mailError('邮件操作失败', 500)
 }
 
 export function mailSuccess<T>(data: T, status = 200) {
@@ -75,13 +75,13 @@ function isJsonRequest(request: Request) {
 }
 
 export async function readMailJson(request: Request) {
-  if (!isJsonRequest(request)) throw new MailServiceInputError('Content-Type must be application/json')
+  if (!isJsonRequest(request)) throw new MailServiceInputError('请求类型必须为 application/json')
   const contentLength = request.headers.get('Content-Length')
   if (contentLength && (!/^\d+$/.test(contentLength.trim())
     || Number(contentLength) > MAIL_REQUEST_MAX_BODY_BYTES)) {
     throw new MailServiceTooLargeError()
   }
-  if (!request.body) throw new MailServiceInputError('Request body is required')
+  if (!request.body) throw new MailServiceInputError('请求内容不能为空')
 
   const reader = request.body.getReader()
   const chunks: Uint8Array[] = []
@@ -107,6 +107,6 @@ export async function readMailJson(request: Request) {
     if (!text.trim()) throw new Error('empty')
     return JSON.parse(text) as unknown
   } catch {
-    throw new MailServiceInputError('Request body must contain valid JSON')
+    throw new MailServiceInputError('请求内容必须是有效的 JSON')
   }
 }

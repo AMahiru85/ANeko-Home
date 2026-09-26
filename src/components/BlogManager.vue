@@ -2,7 +2,7 @@
   <section class="blogManager" aria-labelledby="blog-manager-title">
     <header class="managerToolbar">
       <div>
-        <p>CONTENT WORKSPACE</p>
+        <p>文章管理空间</p>
         <h1 id="blog-manager-title">文章管理</h1>
       </div>
 
@@ -125,7 +125,7 @@
           <form class="blogEditor" @submit.prevent="savePost">
             <header class="editorHeader">
               <div>
-                <p>{{ originalSlug ? 'EDIT ARTICLE' : 'NEW ARTICLE' }}</p>
+                <p>{{ originalSlug ? '编辑文章' : '新建文章' }}</p>
                 <h3 id="blog-editor-title">{{ originalSlug ? '编辑文章' : '新建文章' }}</h3>
               </div>
               <button type="button" title="关闭" aria-label="关闭" :disabled="editorSaving || editorClosing" @click="closeEditor">
@@ -139,7 +139,7 @@
 
               <div class="editorFields">
                 <label>
-                  <span>Slug</span>
+                  <span>文章路径（Slug）</span>
                   <input v-model.trim="form.slug" type="text" autocomplete="off" required :disabled="Boolean(originalSlug)" />
                 </label>
                 <label>
@@ -167,7 +167,7 @@
                   <input v-model="form.tags" type="text" autocomplete="off" placeholder="Astro, Cloudflare" />
                 </label>
                 <label class="is-wide">
-                  <span>头图 URL</span>
+                  <span>头图链接</span>
                   <div class="editorInputAction">
                     <input v-model.trim="form.heroImage" type="text" autocomplete="off" />
                     <input ref="heroInput" class="managerFileInput" type="file" accept="image/*" @change="handleHeroInput" />
@@ -203,7 +203,7 @@
 
               <section v-if="assets.length" class="editorAssets" aria-labelledby="editor-assets-title">
                 <header>
-                  <p>ATTACHMENTS</p>
+                  <p>附件管理</p>
                   <h4 id="editor-assets-title">文章附件</h4>
                 </header>
                 <div class="editorAssetList">
@@ -267,6 +267,7 @@ import {
 } from '@lucide/vue'
 import { apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin-client'
 import { isValidBlogSlug } from '../utils/blog-config'
+import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
 
@@ -391,7 +392,7 @@ async function loadPosts() {
     status.value = 'ready'
   } catch (error) {
     status.value = 'error'
-    errorMessage.value = error instanceof Error ? error.message : '无法读取文章'
+    errorMessage.value = userErrorMessage(error, '无法读取文章，请稍后重试。')
   }
 }
 
@@ -405,7 +406,7 @@ async function submitSiteToIndexNow() {
     })
     showNotice(`已向 IndexNow 提交 ${result.submitted} 个公开页面`)
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : 'IndexNow 提交失败', 'error')
+    showNotice(userErrorMessage(error, 'IndexNow 提交失败，请稍后重试。'), 'error')
   } finally {
     indexNowSubmitting.value = false
   }
@@ -471,7 +472,7 @@ async function openEditEditor(slug: string) {
     })
     assets.value = nextAssets
   } catch (error) {
-    editorError.value = error instanceof Error ? error.message : '无法读取文章'
+    editorError.value = userErrorMessage(error, '无法读取文章，请稍后重试。')
   } finally {
     editorLoading.value = false
   }
@@ -485,7 +486,7 @@ async function savePost() {
   editorError.value = ''
   const slug = form.slug.trim()
   if (!validateSlug(slug)) {
-    editorError.value = 'Slug 只能使用字母、数字和连字符，且不能与系统页面重名'
+    editorError.value = '文章链接只能使用字母、数字和连字符，且不能与系统页面重名。'
     return
   }
 
@@ -515,7 +516,7 @@ async function savePost() {
     showNotice(form.draft ? '草稿已保存' : '文章已发布')
     await loadPosts()
   } catch (error) {
-    editorError.value = error instanceof Error ? error.message : '保存失败'
+    editorError.value = userErrorMessage(error, '保存失败，请稍后重试。')
   } finally {
     editorSaving.value = false
   }
@@ -532,7 +533,7 @@ async function deletePost(post: StoredBlogPost) {
     showNotice('文章已删除')
     await loadPosts()
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : '删除失败', 'error')
+    showNotice(userErrorMessage(error, '删除失败，请稍后重试。'), 'error')
   }
 }
 
@@ -550,7 +551,7 @@ function safeFileName(name: string) {
 
 async function uploadAsset(file: File) {
   const slug = form.slug.trim()
-  if (!validateSlug(slug)) throw new Error('请先填写有效的 Slug')
+  if (!validateSlug(slug)) throw new Error('请先填写有效的文章路径（Slug）')
 
   const uniqueName = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeFileName(file.name)}`
   const path = `${slug}/${uniqueName}`
@@ -579,7 +580,7 @@ async function handleHeroInput(event: Event) {
   try {
     form.heroImage = await uploadAsset(file)
   } catch (error) {
-    editorError.value = error instanceof Error ? error.message : '头图上传失败'
+    editorError.value = userErrorMessage(error, '头图上传失败，请稍后重试。')
   } finally {
     assetUploading.value = false
     input.value = ''
@@ -603,7 +604,7 @@ async function handleAssetInput(event: Event) {
     }
     insertBodyText(`\n\n${snippets.join('\n\n')}\n`)
   } catch (error) {
-    editorError.value = error instanceof Error ? error.message : '附件上传失败'
+    editorError.value = userErrorMessage(error, '附件上传失败，请稍后重试。')
   } finally {
     assetUploading.value = false
     input.value = ''
@@ -679,7 +680,7 @@ async function deleteAsset(asset: BlogAsset) {
     if (form.heroImage === assetUrl(asset)) form.heroImage = ''
     showNotice('附件已删除')
   } catch (error) {
-    editorError.value = error instanceof Error ? error.message : '附件删除失败'
+    editorError.value = userErrorMessage(error, '附件删除失败，请稍后重试。')
   }
 }
 

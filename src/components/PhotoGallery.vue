@@ -9,11 +9,11 @@
   >
     <header class="photoGalleryMeta">
       <div>
-        <p>FRAME INDEX</p>
+        <p>照片索引</p>
         <h2 id="photo-gallery-title">全部照片</h2>
       </div>
       <div class="photoGalleryStatus">
-        <span>{{ String(flatImages.length).padStart(2, '0') }} FRAMES</span>
+        <span>{{ String(flatImages.length).padStart(2, '0') }} 张照片</span>
         <input ref="uploadInput" class="photoFileInput" type="file" accept="image/*" multiple @change="handleUploadInput" />
         <button
           v-if="isAuthenticated"
@@ -143,7 +143,7 @@
           <form class="photoEditModal" @submit.prevent="savePhotoDetails">
             <header>
               <div>
-                <p>FRAME DETAILS</p>
+                <p>照片详情</p>
                 <h3 id="photo-edit-title">编辑照片</h3>
               </div>
               <button type="button" title="关闭" aria-label="关闭" :disabled="operationBusy" @click="closeEditPhoto">
@@ -241,6 +241,7 @@ import {
   X,
 } from '@lucide/vue'
 import { apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin-client'
+import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
 
@@ -376,7 +377,7 @@ async function loadPhotos(forceRefresh = false) {
   } catch (error) {
     if ((error as Error).name === 'AbortError') return
     status.value = 'error'
-    errorMessage.value = error instanceof Error ? error.message : '无法读取照片清单'
+    errorMessage.value = userErrorMessage(error, '无法读取照片清单，请稍后重试。')
   }
 }
 
@@ -570,7 +571,7 @@ async function uploadPhotos(files: File[]) {
     showOperation(`已上传 ${additions.length} 张照片`)
   } catch (error) {
     await Promise.allSettled(uploadedPaths.map(deleteImageObject))
-    showOperation(error instanceof Error ? error.message : '照片上传失败', 'error')
+    showOperation(userErrorMessage(error, '照片上传失败，请稍后重试。'), 'error')
   } finally {
     isUploading.value = false
     operationBusy.value = false
@@ -616,7 +617,7 @@ async function movePhoto(index: number, direction: -1 | 1) {
     await applyManifest(nextManifest)
     showOperation('照片顺序已更新')
   } catch (error) {
-    showOperation(error instanceof Error ? error.message : '排序失败', 'error')
+    showOperation(userErrorMessage(error, '照片排序失败，请稍后重试。'), 'error')
   } finally {
     operationBusy.value = false
   }
@@ -660,7 +661,7 @@ async function savePhotoDetails() {
     document.documentElement.style.removeProperty('overflow')
     showOperation('照片信息已保存')
   } catch (error) {
-    editError.value = error instanceof Error ? error.message : '保存失败'
+    editError.value = userErrorMessage(error, '照片信息保存失败，请稍后重试。')
   } finally {
     operationBusy.value = false
   }
@@ -688,7 +689,7 @@ async function deletePhoto(index: number) {
     const cleanupFailed = cleanup.some((result) => result.status === 'rejected')
     showOperation(cleanupFailed ? '照片已移出相册，原图清理失败' : '照片已删除', cleanupFailed ? 'error' : 'success')
   } catch (error) {
-    showOperation(error instanceof Error ? error.message : '删除失败', 'error')
+    showOperation(userErrorMessage(error, '照片删除失败，请稍后重试。'), 'error')
   } finally {
     operationBusy.value = false
   }

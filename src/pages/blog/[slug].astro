@@ -56,8 +56,8 @@ if (!post) Astro.response.status = 404
         <div class="blogArticleMeta">
           <span>{post.data.tags[0] ?? '随笔'}</span>
           <time datetime={post.data.pubDate.toISOString()}>{formatPostDate(post.data.pubDate)}</time>
-          <small>{getReadingTime(post)} MIN READ</small>
-          <small>BY {post.data.author.toLocaleUpperCase('zh-CN')}</small>
+          <small>阅读约 {getReadingTime(post)} 分钟</small>
+          <small>作者 {post.data.author}</small>
         </div>
         <div class="blogArticleTitle">
           <h1>{post.data.title}</h1>
@@ -86,7 +86,7 @@ if (!post) Astro.response.status = 404
       {nextPost && (
         <div class="blogArticleEnd">
           <div>
-            <p>NEXT NOTE</p>
+            <p>下一篇文章</p>
             <h2>继续翻阅</h2>
           </div>
           <a href={`/blog/${nextPost.id}/`}>

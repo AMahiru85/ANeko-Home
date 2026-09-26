@@ -10,7 +10,7 @@
     <div class="blogSearchDialog">
       <header class="blogSearchHeader">
         <div>
-          <p>SEARCH</p>
+          <p>文章搜索</p>
           <h2 id="blog-search-title">搜索文章</h2>
         </div>
         <button type="button" aria-label="关闭搜索" title="关闭" @click="$emit('close')">

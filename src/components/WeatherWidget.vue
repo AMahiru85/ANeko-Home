@@ -81,7 +81,7 @@
     <div v-else-if="status === 'error'" class="weatherCopy weatherStateCopy" role="alert">
       <p class="weatherReading">天气暂不可用</p>
       <div class="weatherSummaryMeta"><span>点击右上角重新加载</span></div>
-      <p class="weatherLocation">{{ errorMessage }}</p>
+      <p class="weatherLocation">{{ localizedErrorMessage }}</p>
     </div>
 
     <div v-else class="weatherCopy weatherStateCopy" aria-live="polite">
@@ -154,7 +154,7 @@
 
           <div class="weatherDialogBody">
             <p v-if="status === 'error'" class="weatherRefreshNotice" role="alert">
-              刷新失败，当前仍显示上次获取的数据：{{ errorMessage }}
+              刷新失败，当前仍显示上次获取的数据：{{ localizedErrorMessage }}
             </p>
 
             <div
@@ -167,7 +167,7 @@
               <section v-if="weather.alerts.length" class="weatherDetailSection weatherAlertSection" aria-labelledby="weather-alert-title">
                 <div class="weatherSectionHeading">
                   <div>
-                    <p>ALERTS</p>
+                    <p>预警信息</p>
                     <h3 id="weather-alert-title">气象预警</h3>
                   </div>
                   <span>{{ weather.alerts.length }} 条</span>
@@ -189,7 +189,7 @@
               <section class="weatherDetailSection" aria-labelledby="weather-current-title">
                 <div class="weatherSectionHeading">
                   <div>
-                    <p>CURRENT</p>
+                    <p>实时数据</p>
                     <h3 id="weather-current-title">当前状况</h3>
                   </div>
                   <span v-if="weather.aqi !== null" class="weatherAqiBadge" :data-tone="aqiTone">
@@ -207,7 +207,7 @@
               <section v-if="weather.minutelyPrecipitation" class="weatherDetailSection" aria-labelledby="weather-minutely-title">
                 <div class="weatherSectionHeading">
                   <div>
-                    <p>PRECIPITATION</p>
+                    <p>降水情况</p>
                     <h3 id="weather-minutely-title">分钟级降水</h3>
                   </div>
                   <span>{{ formatReportTime(weather.minutelyPrecipitation.updateTime) }}</span>
@@ -229,7 +229,7 @@
               <section class="weatherDetailSection" aria-labelledby="weather-air-title">
                 <div class="weatherSectionHeading">
                   <div>
-                    <p>AIR QUALITY</p>
+                    <p>空气质量</p>
                     <h3 id="weather-air-title">空气污染物</h3>
                   </div>
                   <span v-if="weather.aqiPrimary">首要污染物 {{ weather.aqiPrimary }}</span>
@@ -252,7 +252,7 @@
               aria-labelledby="weather-hourly-tab"
             >
               <div class="weatherSectionHeading weatherTabHeading">
-                <div><p>NEXT 24 HOURS</p><h3>逐小时预报</h3></div>
+                <div><p>未来 24 小时</p><h3>逐小时预报</h3></div>
                 <span>{{ weather.hourlyForecast.length }} 个时段</span>
               </div>
               <div v-if="weather.hourlyForecast.length" class="weatherHourlyScroller" tabindex="0" aria-label="未来 24 小时天气">
@@ -278,7 +278,7 @@
               aria-labelledby="weather-forecast-tab"
             >
               <div class="weatherSectionHeading weatherTabHeading">
-                <div><p>7 DAY OUTLOOK</p><h3>未来天气</h3></div>
+                <div><p>未来 7 天</p><h3>未来天气</h3></div>
                 <span>{{ weather.forecast.length }} 天</span>
               </div>
               <div v-if="weather.forecast.length" class="weatherForecastList">
@@ -314,7 +314,7 @@
               aria-labelledby="weather-indices-tab"
             >
               <div class="weatherSectionHeading weatherTabHeading">
-                <div><p>DAILY GUIDANCE</p><h3>生活指数</h3></div>
+                <div><p>每日建议</p><h3>生活指数</h3></div>
                 <span>{{ weather.lifeIndices.length }} 项</span>
               </div>
               <div v-if="weather.lifeIndices.length" class="weatherIndexGrid">
@@ -336,8 +336,10 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useWeather } from '../composables/useWeather.js'
+import { userErrorMessage } from '../utils/user-error'
 
 const { weather, status, errorMessage, refresh } = useWeather()
+const localizedErrorMessage = computed(() => userErrorMessage(errorMessage.value, '天气服务暂时不可用，请稍后重试。'))
 
 const detailTabs = [
   { id: 'overview', label: '概览' },

@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request }) => {
     const body = await request.json() as { code?: unknown }
     code = typeof body.code === 'string' ? body.code : ''
   } catch {
-    return errorResponse('Invalid JSON body')
+    return errorResponse('请求内容不是有效的 JSON')
   }
 
   const bindings = getBindings()

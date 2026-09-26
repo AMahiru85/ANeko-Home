@@ -12,7 +12,7 @@
         <form class="adminDialog" @submit.prevent="submit">
           <header>
             <div>
-              <p>ADMIN ACCESS</p>
+              <p>管理员验证</p>
               <h3 id="admin-login-title">管理员登录</h3>
             </div>
             <button type="button" title="关闭" aria-label="关闭" @click="close">
@@ -56,6 +56,7 @@ import { LockKeyhole, X } from '@lucide/vue'
 import { storeAdminAccess, verifyAdminAccess as verifyAdminAccessRequest } from '../utils/admin-client'
 import TurnstileWidget from './TurnstileWidget.vue'
 import { TURNSTILE_SITE_KEY } from '../utils/turnstile-client'
+import { userErrorMessage } from '../utils/user-error'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{
@@ -125,7 +126,7 @@ async function submit() {
     storeAdminAccess(code.value)
     emit('authenticated', code.value)
   } catch (nextError) {
-    error.value = nextError instanceof Error ? nextError.message : '登录失败'
+    error.value = userErrorMessage(nextError, '登录失败，请稍后重试。')
   } finally {
     submitting.value = false
   }

@@ -31,7 +31,7 @@ interface BlogPostInput {
 
 function requiredText(value: unknown, field: string) {
   const text = typeof value === 'string' ? value.trim() : ''
-  if (!text) throw new Error(`${field} is required`)
+  if (!text) throw new Error(`${field}不能为空`)
   return text
 }
 
@@ -42,7 +42,7 @@ function optionalText(value: unknown) {
 
 function isoDate(value: unknown, field: string) {
   const date = new Date(requiredText(value, field))
-  if (Number.isNaN(date.valueOf())) throw new Error(`${field} is invalid`)
+  if (Number.isNaN(date.valueOf())) throw new Error(`${field}无效`)
   return date.toISOString()
 }
 
@@ -52,16 +52,16 @@ async function isAuthorized(request: Request, bindings = getBindings()) {
 
 export const GET: APIRoute = async ({ params, request }) => {
   const bindings = getBindings()
-  if (!await isAuthorized(request, bindings)) return errorResponse('Unauthorized', 401)
+  if (!await isAuthorized(request, bindings)) return errorResponse('未授权访问，请重新验证', 401)
 
   const slug = params.slug?.trim() || ''
-  if (!isValidBlogSlug(slug)) return errorResponse('Invalid article slug')
+  if (!isValidBlogSlug(slug)) return errorResponse('文章路径（Slug）无效')
 
   const metadata = await getStoredPostMetadata(slug)
-  if (!metadata) return errorResponse('Article not found', 404)
+  if (!metadata) return errorResponse('未找到文章', 404)
 
   const bodyObject = await bindings.ANEKO_R2.get(metadata.bodyKey)
-  if (!bodyObject) return errorResponse('Article body not found', 404)
+  if (!bodyObject) return errorResponse('未找到文章正文', 404)
 
   return successResponse({
     ...metadata,
@@ -71,25 +71,25 @@ export const GET: APIRoute = async ({ params, request }) => {
 
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   const bindings = getBindings()
-  if (!await isAuthorized(request, bindings)) return errorResponse('Unauthorized', 401)
+  if (!await isAuthorized(request, bindings)) return errorResponse('未授权访问，请重新验证', 401)
 
   const slug = params.slug?.trim() || ''
-  if (!isValidBlogSlug(slug)) return errorResponse('Invalid article slug')
+  if (!isValidBlogSlug(slug)) return errorResponse('文章路径（Slug）无效')
 
   const declaredLength = Number(request.headers.get('Content-Length') || 0)
-  if (declaredLength > MAX_ARTICLE_BYTES) return errorResponse('Article is too large', 413)
+  if (declaredLength > MAX_ARTICLE_BYTES) return errorResponse('文章内容过大', 413)
 
   let input: BlogPostInput
   try {
     input = await request.json()
   } catch {
-    return errorResponse('Invalid JSON body')
+    return errorResponse('请求内容不是有效的 JSON')
   }
 
   try {
     const body = requiredText(input.body, 'body')
     if (new TextEncoder().encode(body).byteLength > MAX_ARTICLE_BYTES) {
-      return errorResponse('Article is too large', 413)
+      return errorResponse('文章内容过大', 413)
     }
 
     const tags = Array.isArray(input.tags)
@@ -125,16 +125,16 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
     return successResponse(metadata)
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to save article')
+    return errorResponse(error instanceof Error ? error.message : '文章保存失败')
   }
 }
 
 export const DELETE: APIRoute = async ({ params, request, locals }) => {
   const bindings = getBindings()
-  if (!await isAuthorized(request, bindings)) return errorResponse('Unauthorized', 401)
+  if (!await isAuthorized(request, bindings)) return errorResponse('未授权访问，请重新验证', 401)
 
   const slug = params.slug?.trim() || ''
-  if (!isValidBlogSlug(slug)) return errorResponse('Invalid article slug')
+  if (!isValidBlogSlug(slug)) return errorResponse('文章路径（Slug）无效')
 
   const index = await getStoredPostIndex()
   const existing = index.find((post) => post.slug === slug)

@@ -43,24 +43,24 @@ export const GET: APIRoute = async () => {
     const manifest = JSON.parse(raw)
     return isManifest(manifest)
       ? jsonResponse(manifest, 200, 'public, max-age=30')
-      : errorResponse('Invalid photo manifest', 500)
+      : errorResponse('照片清单格式无效', 500)
   } catch {
-    return errorResponse('Invalid photo manifest', 500)
+    return errorResponse('照片清单格式无效', 500)
   }
 }
 
 export const PUT: APIRoute = async ({ request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   try {
     const manifest = await request.json()
-    if (!isManifest(manifest)) return errorResponse('Invalid photo manifest')
+    if (!isManifest(manifest)) return errorResponse('照片清单格式无效')
     await bindings.ANEKO_KV.put(getPhotoManifestKey(bindings), JSON.stringify(manifest))
     return successResponse({ count: manifest.length })
   } catch {
-    return errorResponse('Invalid JSON body')
+    return errorResponse('请求内容不是有效的 JSON')
   }
 }

@@ -27,7 +27,7 @@ const payloadChunk = createPayloadChunk()
 export const GET: APIRoute = async ({ request }) => {
   const fetchSite = request.headers.get('Sec-Fetch-Site')
   if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
-    return errorResponse('Cross-site speed tests are not allowed', 403)
+    return errorResponse('不允许跨站进行速度测试', 403)
   }
 
   const url = new URL(request.url)

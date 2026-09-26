@@ -32,9 +32,9 @@
     </div>
 
     <div class="blogMasthead">
-      <p class="blogKicker">ANeko / JOURNAL</p>
+      <p class="blogKicker">ANeko / 博客</p>
       <component :is="compact ? 'div' : 'h1'" class="blogMastheadTitle">
-        ANeko <span class="gradientText">Blog</span>
+        ANeko - Home <span class="gradientText">博客</span>
       </component>
       <p class="blogMastheadCopy">代码与日常留下的片段</p>
     </div>

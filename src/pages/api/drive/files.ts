@@ -55,21 +55,21 @@ export const GET: APIRoute = async ({ request }) => {
       cursor: result.truncated ? result.cursor : undefined,
     })
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to list files')
+    return errorResponse(error instanceof Error ? error.message : '读取文件列表失败')
   }
 }
 
 export const POST: APIRoute = async ({ request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   try {
     const formData = await request.formData()
     const prefix = normalizeFolderPath(String(formData.get('prefix') || ''))
     const files = formData.getAll('files').filter((entry): entry is File => entry instanceof File)
-    if (!files.length) return errorResponse('No files provided')
+    if (!files.length) return errorResponse('请先选择要上传的文件')
 
     const uploaded: string[] = []
     for (const file of files) {
@@ -83,14 +83,14 @@ export const POST: APIRoute = async ({ request }) => {
 
     return successResponse({ uploaded }, 201)
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to upload files')
+    return errorResponse(error instanceof Error ? error.message : '文件上传失败')
   }
 }
 
 export const DELETE: APIRoute = async ({ request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   try {
@@ -118,6 +118,6 @@ export const DELETE: APIRoute = async ({ request }) => {
 
     return successResponse({ deleted: relativeKey })
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to delete file')
+    return errorResponse(error instanceof Error ? error.message : '文件删除失败')
   }
 }

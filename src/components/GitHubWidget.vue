@@ -7,7 +7,7 @@
         </svg>
         <div>
           <p class="githubEyebrow">GitHub</p>
-          <h2 id="github-module-title">Developer Activity</h2>
+          <h2 id="github-module-title">开发者动态</h2>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
       </svg>
       <div>
         <h3>GitHub 信息暂不可用</h3>
-        <p>{{ errorMessage || '请稍后重新加载。' }}</p>
+        <p>{{ localizedErrorMessage }}</p>
       </div>
       <button type="button" @click="refresh">重新加载</button>
     </div>
@@ -61,7 +61,7 @@
         <div class="githubIdentity">
           <p class="githubHandle">@{{ displayLogin }}</p>
           <h3>{{ profile?.name || displayLogin }}</h3>
-          <p class="githubBio">{{ profile?.bio || 'GitHub profile details are temporarily unavailable.' }}</p>
+          <p class="githubBio">{{ profile?.bio || 'GitHub 个人资料暂时无法加载。' }}</p>
           <p v-if="profile?.location" class="githubLocation">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path>
@@ -73,15 +73,15 @@
 
         <dl v-if="profile" class="githubStats">
           <div>
-            <dt>Repositories</dt>
+            <dt>仓库</dt>
             <dd>{{ profile.publicRepos }}</dd>
           </div>
           <div>
-            <dt>Followers</dt>
+            <dt>关注者</dt>
             <dd>{{ profile.followers }}</dd>
           </div>
           <div>
-            <dt>Following</dt>
+            <dt>正在关注</dt>
             <dd>{{ profile.following }}</dd>
           </div>
         </dl>
@@ -93,7 +93,7 @@
         </a>
       </article>
 
-      <p v-if="status === 'partial'" class="githubPartialNotice" role="status" :aria-label="errorMessage">
+      <p v-if="status === 'partial'" class="githubPartialNotice" role="status" :aria-label="localizedErrorMessage">
         部分 GitHub 数据暂不可用，已显示可用内容。
       </p>
 
@@ -101,8 +101,8 @@
         <article class="githubContributionCard">
           <div class="githubCardHeader">
             <div>
-              <p class="githubCardEyebrow">Contributions</p>
-              <h3>{{ totalContributions }} in the last year</h3>
+              <p class="githubCardEyebrow">代码贡献</p>
+              <h3>{{ totalContributions }} 次贡献 · 过去一年</h3>
             </div>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <rect x="3" y="3" width="4" height="4" rx="1"></rect>
@@ -126,7 +126,7 @@
               </div>
               <div class="githubCalendarBody">
                 <div class="githubWeekdays" aria-hidden="true">
-                  <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+                  <span></span><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span>
                 </div>
                 <div class="githubCalendarCells">
                   <span
@@ -134,22 +134,22 @@
                     :key="day.date || `blank-${index}`"
                     class="githubContributionCell"
                     :class="day.isBlank ? 'is-blank' : `level-${day.level}`"
-                    :title="day.isBlank ? '' : `${day.date}: ${day.count} contribution${day.count === 1 ? '' : 's'}`"
+                    :title="day.isBlank ? '' : `${day.date}：${day.count} 次贡献`"
                   ></span>
                 </div>
               </div>
             </div>
           </div>
           <div v-else class="githubCardEmpty">
-            {{ failedSections.includes('contributions') ? 'Contribution data unavailable.' : 'No public contributions found.' }}
+            {{ failedSections.includes('contributions') ? '贡献数据暂时无法加载。' : '暂无公开贡献记录。' }}
           </div>
 
           <div class="githubContributionFooter">
-            <a :href="profileUrl" target="_blank" rel="noreferrer">View on GitHub</a>
+            <a :href="profileUrl" target="_blank" rel="noreferrer">在 GitHub 查看</a>
             <div class="githubLegend" aria-label="贡献强度从少到多">
-              <span>Less</span>
+              <span>较少</span>
               <i v-for="level in 5" :key="level" :class="`level-${level - 1}`"></i>
-              <span>More</span>
+              <span>较多</span>
             </div>
           </div>
         </article>
@@ -157,8 +157,8 @@
         <article class="githubActivityCard">
           <div class="githubCardHeader githubActivityHeader">
             <div>
-              <p class="githubCardEyebrow">Recent Activity</p>
-              <h3>Public events</h3>
+              <p class="githubCardEyebrow">近期动态</p>
+              <h3>公开动态</h3>
             </div>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="6" cy="5" r="2"></circle>
@@ -178,23 +178,23 @@
             </div>
           </div>
           <div v-else class="githubCardEmpty">
-            {{ failedSections.includes('events') ? 'Activity data unavailable.' : 'No recent public activity.' }}
+            {{ failedSections.includes('events') ? '动态数据暂时无法加载。' : '暂无近期公开动态。' }}
           </div>
 
-          <a class="githubActivityLink" :href="profileUrl" target="_blank" rel="noreferrer">View all activity</a>
+          <a class="githubActivityLink" :href="profileUrl" target="_blank" rel="noreferrer">查看全部动态</a>
         </article>
       </div>
 
       <div class="githubRepositoryHeader">
-        <p>Updated Repositories</p>
-        <span>{{ repos.length }} shown</span>
+        <p>最近更新的仓库</p>
+        <span>共 {{ repos.length }} 个</span>
       </div>
 
       <div v-if="repos.length" class="githubRepositoryGrid">
         <a v-for="repo in repos" :key="repo.id" class="githubRepoCard" :href="repo.url" target="_blank" rel="noreferrer">
           <div>
             <div class="githubRepoTopline">
-              <span>{{ repo.isFork ? 'Forked Repository' : 'Repository' }}</span>
+              <span>{{ repo.isFork ? '派生仓库' : '仓库' }}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 17 17 7M7 7h10v10"></path>
               </svg>
@@ -209,7 +209,7 @@
         </a>
       </div>
       <div v-else class="githubRepoEmpty">
-        {{ failedSections.includes('repos') ? 'Repository data unavailable.' : 'No public repositories found.' }}
+        {{ failedSections.includes('repos') ? '仓库数据暂时无法加载。' : '暂无公开仓库。' }}
       </div>
     </template>
   </section>
@@ -218,6 +218,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useGitHub } from '../composables/useGitHub.js'
+import { userErrorMessage } from '../utils/user-error'
 
 const {
   username,
@@ -233,6 +234,7 @@ const {
 } = useGitHub()
 
 const isBusy = computed(() => status.value === 'loading' || status.value === 'refreshing')
+const localizedErrorMessage = computed(() => userErrorMessage(errorMessage.value, 'GitHub 数据暂时无法加载，请稍后重试。'))
 const isInitialLoading = computed(() => status.value === 'loading' && !hasData.value)
 const hasData = computed(() => Boolean(profile.value)
   || repos.value.length > 0
@@ -269,7 +271,7 @@ const monthLabels = computed(() => {
     const date = new Date(`${firstRealDay.date}T00:00:00Z`)
     const month = date.getUTCMonth()
     if (month !== previousMonth && index - previousIndex >= 3) {
-      labels.push({ index, label: date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }) })
+      labels.push({ index, label: date.toLocaleString('zh-CN', { month: 'short', timeZone: 'UTC' }) })
       previousMonth = month
       previousIndex = index
     }
@@ -289,7 +291,7 @@ const languageColors = {
   Vue: '#41b883',
 }
 
-const repoDateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+const repoDateFormatter = new Intl.DateTimeFormat('zh-CN', { month: 'short', day: 'numeric' })
 
 function languageColor(language) {
   return languageColors[language] || '#a3a3a3'

@@ -9,7 +9,7 @@ export const prerender = false
 export const GET: APIRoute = async ({ request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   return successResponse(await getStoredPostIndex())

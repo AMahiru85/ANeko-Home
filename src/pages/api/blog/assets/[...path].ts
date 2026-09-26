@@ -13,22 +13,22 @@ function getKey(path?: string) {
 export const GET: APIRoute = async ({ params }) => {
   try {
     const object = await getBindings().ANEKO_R2.get(getKey(params.path))
-    if (!object) return errorResponse('Asset not found', 404)
+    if (!object) return errorResponse('未找到附件', 404)
     return r2ObjectResponse(object, { cacheControl: 'public, max-age=31536000, immutable' })
   } catch {
-    return errorResponse('Invalid asset path')
+    return errorResponse('附件路径无效')
   }
 }
 
 export const PUT: APIRoute = async ({ params, request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   try {
     const path = normalizeObjectPath(params.path || '')
-    if (!request.body) return errorResponse('Request body is required')
+    if (!request.body) return errorResponse('请求内容不能为空')
 
     await bindings.ANEKO_R2.put(`${BLOG_ASSET_PREFIX}${path}`, request.body, {
       httpMetadata: {
@@ -37,14 +37,14 @@ export const PUT: APIRoute = async ({ params, request }) => {
     })
     return successResponse({ path: `/api/blog/assets/${path}` })
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to upload asset')
+    return errorResponse(error instanceof Error ? error.message : '附件上传失败')
   }
 }
 
 export const DELETE: APIRoute = async ({ params, request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   try {
@@ -52,6 +52,6 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     await bindings.ANEKO_R2.delete(`${BLOG_ASSET_PREFIX}${path}`)
     return successResponse({ deleted: path })
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to delete asset')
+    return errorResponse(error instanceof Error ? error.message : '附件删除失败')
   }
 }

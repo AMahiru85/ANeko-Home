@@ -14,12 +14,12 @@ export const POST: APIRoute = async ({ request }) => {
     code = typeof body.code === 'string' ? body.code : ''
     turnstileToken = body['cf-turnstile-response']
   } catch {
-    return errorResponse('Invalid JSON body')
+    return errorResponse('请求内容不是有效的 JSON')
   }
 
   const bindings = getBindings()
   if (!await verifyTurnstileToken(turnstileToken, request, bindings)) {
-    return errorResponse('Turnstile verification failed', 403)
+    return errorResponse('安全验证未通过，请重试', 403)
   }
 
   const valid = await verifyAccessCode(code, bindings.ACCESS_CODE)
@@ -31,6 +31,6 @@ export const POST: APIRoute = async ({ request }) => {
     response.headers.set('Set-Cookie', adminSessionCookie(sessionToken))
     return response
   } catch {
-    return errorResponse('Unable to create admin session', 500)
+    return errorResponse('无法创建管理员会话', 500)
   }
 }

@@ -9,7 +9,7 @@
   >
     <header class="driveToolbar">
       <div>
-        <p>OBJECT STORAGE</p>
+        <p>对象存储</p>
         <h2 id="drive-title">文件目录</h2>
       </div>
 
@@ -141,7 +141,7 @@
           <section class="driveModal driveSpeedModal">
             <header>
               <div>
-                <p>DOWNLOAD TEST</p>
+                <p>下载速度测试</p>
                 <h3 id="drive-speed-title">下载测速</h3>
               </div>
               <button type="button" title="关闭" aria-label="关闭" @click="closeSpeedDialog">
@@ -204,7 +204,7 @@
           <form class="driveModal driveFolderModal" @submit.prevent="createFolder">
             <header>
               <div>
-                <p>NEW DIRECTORY</p>
+                <p>新建目录</p>
                 <h3 id="drive-folder-title">新建文件夹</h3>
               </div>
               <button type="button" title="关闭" aria-label="关闭" @click="closeFolderDialog">
@@ -229,7 +229,7 @@
           <section class="driveModal drivePreviewModal">
             <header>
               <div>
-                <p>FILE PREVIEW</p>
+                <p>文件预览</p>
                 <h3 id="drive-preview-title">{{ displayName(previewFile) }}</h3>
               </div>
               <button type="button" title="关闭" aria-label="关闭" @click="closePreview">
@@ -287,6 +287,7 @@ import {
   X,
 } from '@lucide/vue'
 import { apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin-client'
+import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
 
@@ -397,7 +398,7 @@ async function loadFiles() {
   } catch (error) {
     if ((error as Error).name === 'AbortError') return
     status.value = 'error'
-    errorMessage.value = error instanceof Error ? error.message : '无法读取目录'
+    errorMessage.value = userErrorMessage(error, '无法读取目录，请稍后重试。')
   }
 }
 
@@ -530,7 +531,7 @@ async function uploadFiles(nextFiles: File[]) {
     showNotice(`已上传 ${result.uploaded.length} 个文件`)
     await loadFiles()
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : '上传失败', 'error')
+    showNotice(userErrorMessage(error, '文件上传失败，请稍后重试。'), 'error')
   } finally {
     isUploading.value = false
     if (fileInput.value) fileInput.value.value = ''
@@ -683,7 +684,7 @@ async function startSpeedTest() {
       return
     }
     speedState.value = 'error'
-    speedError.value = error instanceof Error ? error.message : '测速失败'
+    speedError.value = userErrorMessage(error, '测速失败，请稍后重试。')
   } finally {
     clearSpeedTimers()
     if (speedController === controller) speedController = null
@@ -703,7 +704,7 @@ async function createFolder() {
     showNotice('文件夹已创建')
     await loadFiles()
   } catch (error) {
-    folderError.value = error instanceof Error ? error.message : '创建失败'
+    folderError.value = userErrorMessage(error, '文件夹创建失败，请稍后重试。')
   } finally {
     folderSubmitting.value = false
   }
@@ -722,7 +723,7 @@ async function deleteEntry(file: DriveFile) {
     showNotice('已删除')
     await loadFiles()
   } catch (error) {
-    showNotice(error instanceof Error ? error.message : '删除失败', 'error')
+    showNotice(userErrorMessage(error, '删除失败，请稍后重试。'), 'error')
   }
 }
 
@@ -759,7 +760,7 @@ async function openPreview(file: DriveFile) {
     previewText.value = await response.text()
   } catch (error) {
     if ((error as Error).name !== 'AbortError') {
-      previewError.value = error instanceof Error ? error.message : '预览失败'
+      previewError.value = userErrorMessage(error, '文件预览失败，请稍后重试。')
     }
   } finally {
     previewLoading.value = false

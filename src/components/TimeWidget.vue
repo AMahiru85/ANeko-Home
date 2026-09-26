@@ -12,7 +12,7 @@
             @animationend="isRevealing = false"
           ></span>
         </div>
-        <span class="sunTransitLabel">Sun Transit</span>
+        <span class="sunTransitLabel">日照进度</span>
       </div>
     </div>
   </section>
@@ -21,14 +21,15 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-const timeFormatter = new Intl.DateTimeFormat('en-GB', {
+const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
   hour: '2-digit',
   minute: '2-digit',
   hour12: false,
 })
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
+const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
   weekday: 'long',
-  month: 'short',
+  year: 'numeric',
+  month: 'long',
   day: 'numeric',
 })
 
@@ -41,7 +42,7 @@ let revealFrame = null
 let revealStartFrame = null
 
 const timeText = computed(() => now.value ? timeFormatter.format(now.value) : '--:--')
-const dateText = computed(() => now.value ? dateFormatter.format(now.value) : 'Local Time')
+const dateText = computed(() => now.value ? dateFormatter.format(now.value) : '本地时间')
 const machineDateTime = computed(() => now.value?.toISOString())
 const sunProgress = computed(() => {
   if (!now.value) return 0

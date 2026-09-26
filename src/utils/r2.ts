@@ -3,12 +3,12 @@ export function normalizeObjectPath(value: string, allowEmpty = false) {
 
   if (!normalized) {
     if (allowEmpty) return ''
-    throw new Error('Path is required')
+    throw new Error('路径不能为空')
   }
 
   const segments = normalized.split('/')
   if (segments.some((segment) => !segment || segment === '.' || segment === '..' || segment.includes('\0'))) {
-    throw new Error('Invalid path')
+    throw new Error('路径无效')
   }
 
   return segments.join('/')
@@ -21,7 +21,7 @@ export function normalizeFolderPath(value: string) {
 
 export function normalizeFileName(value: string) {
   const normalized = normalizeObjectPath(value)
-  if (normalized.includes('/')) throw new Error('Invalid file name')
+  if (normalized.includes('/')) throw new Error('文件名无效')
   return normalized
 }
 

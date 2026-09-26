@@ -41,7 +41,7 @@ export async function verifyWebhookAuthorization(
 
 function webhookData(value: unknown): JsonRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new MailServiceInputError('Request body must be a JSON object')
+    throw new MailServiceInputError('请求内容必须是 JSON 对象')
   }
   return value as JsonRecord
 }
@@ -60,7 +60,7 @@ function serializedTemplateValue(value: unknown) {
   try {
     return JSON.stringify(value) || ''
   } catch {
-    throw new MailServiceInputError('Webhook data cannot be serialized')
+    throw new MailServiceInputError('Webhook 数据无法序列化')
   }
 }
 
@@ -84,7 +84,7 @@ function renderTemplate(
 
   const append = (value: string) => {
     if (value.length > maxLength - outputLength) {
-      throw new MailServiceInputError(`Rendered webhook ${field} is too long`)
+      throw new MailServiceInputError(`Webhook 渲染后的 ${field} 内容过长`)
     }
     chunks.push(value)
     outputLength += value.length
@@ -106,7 +106,7 @@ function idempotencyKey(request: Request) {
   const supplied = request.headers.get('Idempotency-Key')?.trim()
   if (!supplied) return `webhook:${crypto.randomUUID()}`
   if (!IDEMPOTENCY_KEY_PATTERN.test(supplied)) {
-    throw new MailServiceInputError('Idempotency-Key must be 8 to 120 letters, digits, dots, underscores, colons, or hyphens')
+    throw new MailServiceInputError('Idempotency-Key 长度需为 8 到 120 个字符，且只能包含字母、数字、点、下划线、冒号或连字符')
   }
   return `webhook:${supplied}`
 }

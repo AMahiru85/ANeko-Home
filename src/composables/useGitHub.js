@@ -34,7 +34,7 @@ function normalizeProfile(data) {
     login: data.login,
     name: data.name || data.login,
     avatar: data.avatar_url || '',
-    bio: data.bio || 'No bio provided.',
+    bio: data.bio || '暂无个人简介。',
     location: data.location || '',
     blog: data.blog || '',
     publicRepos: Number(data.public_repos) || 0,
@@ -53,16 +53,45 @@ function normalizeRepos(data) {
     .map((repo) => ({
       id: repo.id,
       name: repo.name,
-      description: repo.description || 'No description provided.',
-      language: repo.language || 'Other',
+      description: repo.description || '暂无仓库描述。',
+      language: repo.language || '其他',
       url: repo.html_url,
       updatedAt: repo.updated_at,
       isFork: Boolean(repo.fork),
     }))
 }
 
-function capitalize(value) {
-  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : ''
+function translateEventAction(value) {
+  const actionLabels = {
+    assigned: '指派了',
+    closed: '关闭了',
+    created: '创建了',
+    deleted: '删除了',
+    edited: '编辑了',
+    labeled: '添加了标签',
+    locked: '锁定了',
+    milestoned: '加入了里程碑',
+    opened: '开启了',
+    pinned: '置顶了',
+    published: '发布了',
+    reopened: '重新开启了',
+    synchronize: '更新了',
+    synchronized: '更新了',
+    unassigned: '取消指派了',
+    unlabeled: '移除了标签',
+    unlocked: '解锁了',
+    unpinned: '取消置顶了',
+    demilestoned: '移出了里程碑',
+    prereleased: '预发布了',
+    released: '发布了',
+    unpublished: '取消发布了',
+  }
+
+  return actionLabels[value] || '更新了'
+}
+
+function translateReferenceType(value) {
+  return ({ branch: '分支', repository: '仓库', tag: '标签' })[value] || '引用'
 }
 
 function describeEvent(event) {
@@ -72,33 +101,34 @@ function describeEvent(event) {
     case 'PushEvent': {
       const message = payload.commits?.[0]?.message?.split('\n')[0]
       const branch = payload.ref?.replace('refs/heads/', '')
-      return message ? `Pushed: "${message}"` : `Pushed to ${branch || 'repository'}`
+      if (message) return `推送：${message}`
+      return branch ? `推送到分支 ${branch}` : '推送了提交'
     }
     case 'CreateEvent':
-      return `Created ${payload.ref_type || 'reference'}${payload.ref ? ` ${payload.ref}` : ''}`
+      return `${translateEventAction('created')}${translateReferenceType(payload.ref_type)}${payload.ref ? ` ${payload.ref}` : ''}`
     case 'DeleteEvent':
-      return `Deleted ${payload.ref_type || 'reference'}${payload.ref ? ` ${payload.ref}` : ''}`
+      return `${translateEventAction('deleted')}${translateReferenceType(payload.ref_type)}${payload.ref ? ` ${payload.ref}` : ''}`
     case 'WatchEvent':
-      return 'Starred repository'
+      return '收藏了仓库'
     case 'ForkEvent':
-      return 'Forked repository'
+      return '派生了仓库'
     case 'IssuesEvent':
-      return `${capitalize(payload.action)} issue`
+      return `${translateEventAction(payload.action)}议题`
     case 'PullRequestEvent':
-      return `${capitalize(payload.action)} pull request`
+      return `${translateEventAction(payload.action)}拉取请求`
     case 'ReleaseEvent':
-      return `${capitalize(payload.action)} release`
+      return `${translateEventAction(payload.action)}版本`
     case 'PublicEvent':
-      return 'Made repository public'
+      return '将仓库设为公开'
     default:
-      return 'Updated repository'
+      return '更新了仓库'
   }
 }
 
 function normalizeEvents(data) {
   if (!Array.isArray(data)) throw new Error('GitHub 动态数据格式无效')
 
-  const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  const dateFormatter = new Intl.DateTimeFormat('zh-CN', {
     month: 'short',
     day: 'numeric',
   })

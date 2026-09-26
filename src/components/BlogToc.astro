@@ -15,7 +15,7 @@ const visibleHeadings = headings.filter((heading: Heading) => heading.depth >= 2
 
 {visibleHeadings.length > 0 && (
   <aside class="blogToc">
-    <p>ON THIS PAGE</p>
+    <p>本文目录</p>
     <nav aria-label="文章目录">
       {visibleHeadings.map((heading: Heading) => (
         <a class:list={{ 'is-nested': heading.depth === 3 }} href={`#${heading.slug}`}>

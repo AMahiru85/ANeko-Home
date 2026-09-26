@@ -15,17 +15,17 @@ export const prerender = false
 export const POST: APIRoute = async ({ request, params }) => {
   try {
     const endpointId = params.endpoint
-    if (!endpointId) return mailError('Webhook not found', 404)
+    if (!endpointId) return mailError('未找到 Webhook 配置', 404)
     const bindings = getBindings()
     const store = await readMailWebhookStore(bindings)
     const resolved = publicMailWebhook(store, endpointId)
-    if (!resolved) return mailError('Webhook not found', 404)
+    if (!resolved) return mailError('未找到 Webhook 配置', 404)
     const webhook = { ...resolved, revision: store.revision, updatedAt: store.updatedAt }
     const body = await readMailJson(request)
     if (!await verifyWebhookAuthorization(request, webhook.token, body)) {
-      return mailError('Unauthorized', 401, { 'WWW-Authenticate': 'Bearer' })
+      return mailError('访问令牌无效或缺失', 401, { 'WWW-Authenticate': 'Bearer' })
     }
-    if (!webhook.enabled) return mailError('Webhook is disabled', 503)
+    if (!webhook.enabled) return mailError('Webhook 已停用', 503)
     const configuration = await readMailConfiguration(bindings)
     assertMailHostsAllowed(bindings, configuration)
     const input = webhookMailInput(webhook, request, body)

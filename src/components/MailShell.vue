@@ -2,7 +2,7 @@
   <section class="mailPage" aria-labelledby="mail-title">
     <header class="mailToolbar">
       <div>
-        <p>PRIVATE WEBMAIL</p>
+        <p>私人邮箱</p>
         <h2 id="mail-title">邮箱</h2>
       </div>
 
@@ -93,7 +93,7 @@
       >
         <header class="mailPanelHeader">
           <div>
-            <p>MAILBOXES</p>
+            <p>邮箱文件夹</p>
             <h3>{{ isAuthenticated ? (config?.address || props.publicAddress || '邮箱') : (props.publicAddress || '管理员邮箱') }}</h3>
           </div>
           <button type="button" title="写邮件" aria-label="写邮件" @click="openComposer">
@@ -139,7 +139,7 @@
             <ChevronLeft :size="18" :stroke-width="1.8" aria-hidden="true" />
           </button>
           <div>
-            <p>MESSAGES</p>
+            <p>邮件列表</p>
             <h3>{{ activeFolderLabel }}</h3>
           </div>
           <button type="button" title="刷新邮件" aria-label="刷新邮件" :disabled="isAuthenticated && messagesStatus === 'loading'" @click="refreshMessages">
@@ -283,7 +283,7 @@
           <form class="mailComposer" @submit.prevent="sendMessage">
             <header>
               <div>
-                <p>NEW MESSAGE</p>
+                <p>新邮件</p>
                 <h3 id="mail-compose-title">写邮件</h3>
               </div>
               <button type="button" title="关闭" aria-label="关闭" :disabled="sending" @click="closeComposer">
@@ -355,6 +355,7 @@ import {
   X,
 } from '@lucide/vue'
 import { ApiRequestError, apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin-client'
+import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
 const MailSettingsPanel = defineAsyncComponent(() => import('./MailSettingsPanel.vue'))
@@ -688,7 +689,7 @@ async function loadMessages(cursor: string | null) {
 async function loadMessageDetail(summary: MailSummary) {
   if (!uidValidity.value) {
     detailStatus.value = 'error'
-    detailError.value = '邮箱服务器未返回 UIDVALIDITY，请刷新后重试'
+    detailError.value = '邮箱服务器暂时无法确认邮件位置，请刷新后重试'
     return
   }
   const epoch = pageEpoch.value
@@ -972,7 +973,12 @@ function folderIcon(folder: MailFolder): Component {
 function folderLabel(folder: MailFolder) {
   const tail = folder.name.split(folder.delimiter || '/').filter(Boolean).at(-1) || folder.name
   const labels: Record<string, string> = {
-    inbox: '收件箱', sent: '已发送', trash: '已删除', deleted: '已删除', archive: '归档', drafts: '草稿箱', junk: '垃圾邮件', spam: '垃圾邮件',
+    inbox: '收件箱',
+    sent: '已发送', 'sent items': '已发送', 'sent mail': '已发送',
+    trash: '已删除', deleted: '已删除', 'deleted items': '已删除',
+    archive: '归档', archives: '归档', 'all mail': '全部邮件', 'all messages': '全部邮件',
+    draft: '草稿箱', drafts: '草稿箱', junk: '垃圾邮件', spam: '垃圾邮件',
+    starred: '星标邮件', flagged: '已标记', important: '重要邮件', outbox: '发件箱',
   }
   return labels[tail.toLowerCase()] || tail
 }
@@ -1059,7 +1065,7 @@ function errorMessage(error: unknown, fallback: string) {
     logout(false)
     return '管理员会话已失效，请重新登录'
   }
-  return error instanceof Error ? error.message : fallback
+  return userErrorMessage(error, fallback)
 }
 
 function isAbortError(error: unknown) {
@@ -1094,7 +1100,7 @@ watch(
     } catch {
       if (epoch !== htmlSanitizeEpoch) return
       safeHtmlBody.value = ''
-      showNotice('HTML 正文处理失败，已显示纯文本', 'error')
+      showNotice('邮件格式处理失败，已切换为纯文本显示', 'error')
     }
   },
 )

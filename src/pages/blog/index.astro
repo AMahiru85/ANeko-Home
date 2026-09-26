@@ -40,7 +40,7 @@ const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
           </div>
           <div class="blogFeaturedAside" aria-hidden="true">
             <span>{String(allPosts.length).padStart(2, '0')}</span>
-            <small>{getReadingTime(featuredPost)} MIN READ</small>
+            <small>阅读约 {getReadingTime(featuredPost)} 分钟</small>
           </div>
         </a>
 
@@ -59,7 +59,7 @@ const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
           <>
             <div class="blogArchiveHeading">
               <div>
-                <p>ARTICLES</p>
+                <p>更多文章</p>
                 <h2>更多文章</h2>
               </div>
               <span>{String(morePosts.length).padStart(2, '0')} 篇</span>

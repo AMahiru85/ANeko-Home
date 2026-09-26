@@ -37,14 +37,14 @@ export class MailServiceConflictError extends Error {
 
 export class MailServiceNotFoundError extends Error {
   constructor() {
-    super('Message was not found')
+    super('未找到这封邮件')
     this.name = 'MailServiceNotFoundError'
   }
 }
 
 export class MailServiceTooLargeError extends Error {
   constructor() {
-    super('Message is too large to open')
+    super('邮件内容过大，无法打开')
     this.name = 'MailServiceTooLargeError'
   }
 }
@@ -53,7 +53,7 @@ export class MailServiceRateLimitError extends Error {
   retryAfter: number
 
   constructor(retryAfter: number) {
-    super('Too many mail send requests')
+    super('邮件发送请求过于频繁，请稍后再试')
     this.name = 'MailServiceRateLimitError'
     this.retryAfter = retryAfter
   }
@@ -61,14 +61,14 @@ export class MailServiceRateLimitError extends Error {
 
 export class MailServiceUnavailableError extends Error {
   constructor() {
-    super('Mail service is unavailable')
+    super('邮箱服务暂时不可用')
     this.name = 'MailServiceUnavailableError'
   }
 }
 
 function asRecord(value: unknown, field: string): JsonRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new MailServiceInputError(`${field} must be an object`)
+    throw new MailServiceInputError(`${field} 必须是对象`)
   }
   return value as JsonRecord
 }
@@ -76,16 +76,16 @@ function asRecord(value: unknown, field: string): JsonRecord {
 function normalizeFolder(value: string | null) {
   const folder = value?.trim() || ''
   if (!folder || folder.length > MAX_FOLDER_LENGTH || CONTROL_CHARACTER_PATTERN.test(folder)) {
-    throw new MailServiceInputError('folder is invalid')
+    throw new MailServiceInputError('folder 无效')
   }
   return folder
 }
 
 function positiveInteger(value: string | null, field: string) {
-  if (!value || !/^\d+$/.test(value)) throw new MailServiceInputError(`${field} is invalid`)
+  if (!value || !/^\d+$/.test(value)) throw new MailServiceInputError(`${field} 无效`)
   const number = Number(value)
   if (!Number.isSafeInteger(number) || number < 1) {
-    throw new MailServiceInputError(`${field} is invalid`)
+    throw new MailServiceInputError(`${field} 无效`)
   }
   return number
 }
@@ -241,7 +241,7 @@ export function parseMailListOptions(url: URL): MailListOptions {
   const folder = normalizeFolder(url.searchParams.get('folder'))
   const rawLimit = url.searchParams.get('limit')
   const limit = rawLimit === null ? 20 : positiveInteger(rawLimit, 'limit')
-  if (limit > MAX_LIST_LIMIT) throw new MailServiceInputError(`limit must be at most ${MAX_LIST_LIMIT}`)
+  if (limit > MAX_LIST_LIMIT) throw new MailServiceInputError(`limit 不能超过 ${MAX_LIST_LIMIT}`)
   const rawCursor = url.searchParams.get('cursor')
   const rawUidValidity = url.searchParams.get('uidValidity')
   const cursor = rawCursor === null || rawCursor === '' ? null : positiveInteger(rawCursor, 'cursor')
@@ -260,7 +260,7 @@ export async function listMailMessages(configuration: MailConfiguration, options
     const mailbox = await imap.examine(options.folder)
     if (!mailbox.uidValidity) throw new MailServiceUnavailableError()
     if (options.uidValidity !== null && options.uidValidity !== mailbox.uidValidity) {
-      throw new MailServiceConflictError('Mailbox changed; refresh the message list')
+      throw new MailServiceConflictError('邮箱内容已变化，请刷新邮件列表')
     }
     const allUids = await imap.searchEmails({ all: true, useUid: true })
     const candidates = [...new Set(allUids)]
@@ -305,7 +305,7 @@ async function assertUidValidity(imap: CFImap, target: MailMessageTarget, readOn
     ? await imap.examine(target.folder)
     : await imap.selectFolder(target.folder)
   if (!mailbox.uidValidity || mailbox.uidValidity !== target.uidValidity) {
-    throw new MailServiceConflictError('Mailbox changed; refresh the message list')
+    throw new MailServiceConflictError('邮箱内容已变化，请刷新邮件列表')
   }
 }
 
@@ -357,7 +357,7 @@ export async function setMailMessageSeen(
 ) {
   const input = asRecord(value, 'body')
   if (Object.keys(input).some((key) => key !== 'seen') || typeof input.seen !== 'boolean') {
-    throw new MailServiceInputError('body.seen must be a boolean')
+    throw new MailServiceInputError('body.seen 必须是布尔值')
   }
   return withImap(configuration, async (imap) => {
     await assertUidValidity(imap, target, false)
@@ -383,13 +383,13 @@ export async function setMailMessageSeen(
 }
 
 function normalizeRecipients(value: unknown, field: 'to' | 'cc') {
-  if (!Array.isArray(value)) throw new MailServiceInputError(`body.${field} must be an array`)
+  if (!Array.isArray(value)) throw new MailServiceInputError(`body.${field} 必须是数组`)
   const recipients: string[] = []
   for (const item of value) {
-    if (typeof item !== 'string') throw new MailServiceInputError(`body.${field} is invalid`)
+    if (typeof item !== 'string') throw new MailServiceInputError(`body.${field} 无效`)
     const email = item.trim().toLowerCase()
     if (!EMAIL_PATTERN.test(email) || email.length > 254 || recipients.includes(email)) {
-      throw new MailServiceInputError(`body.${field} is invalid`)
+      throw new MailServiceInputError(`body.${field} 无效`)
     }
     recipients.push(email)
   }
@@ -407,25 +407,25 @@ export interface SendMailInput {
 export function parseSendMailInput(value: unknown): SendMailInput {
   const input = asRecord(value, 'body')
   if (Object.keys(input).some((key) => !['idempotencyKey', 'to', 'cc', 'subject', 'text'].includes(key))) {
-    throw new MailServiceInputError('body contains unsupported fields')
+    throw new MailServiceInputError('请求包含不支持的字段')
   }
   const idempotencyKey = typeof input.idempotencyKey === 'string' ? input.idempotencyKey.trim() : ''
   if (idempotencyKey.length > MAX_IDEMPOTENCY_KEY_LENGTH
     || !IDEMPOTENCY_KEY_PATTERN.test(idempotencyKey)) {
-    throw new MailServiceInputError('body.idempotencyKey is invalid')
+    throw new MailServiceInputError('body.idempotencyKey 无效')
   }
   const to = normalizeRecipients(input.to, 'to')
   const cc = normalizeRecipients(input.cc, 'cc')
   if (!to.length || to.length + cc.length > MAX_RECIPIENTS) {
-    throw new MailServiceInputError(`between 1 and ${MAX_RECIPIENTS} recipients are required`)
+    throw new MailServiceInputError(`收件人数量必须在 1 到 ${MAX_RECIPIENTS} 之间`)
   }
   if (typeof input.subject !== 'string'
     || input.subject.length > MAIL_SUBJECT_MAX_LENGTH
     || CONTROL_CHARACTER_PATTERN.test(input.subject)) {
-    throw new MailServiceInputError('body.subject is invalid')
+    throw new MailServiceInputError('body.subject 无效')
   }
   if (typeof input.text !== 'string' || !input.text || input.text.length > MAIL_TEXT_MAX_LENGTH) {
-    throw new MailServiceInputError('body.text is invalid')
+    throw new MailServiceInputError('body.text 无效')
   }
   return { idempotencyKey, to, cc, subject: input.subject, text: input.text }
 }
@@ -491,15 +491,15 @@ export async function sendMail(
   const existing = await readIdempotencyRecord(bindings, idempotencyKey)
   if (existing) {
     if (existing.hash !== payloadHash) {
-      throw new MailServiceConflictError('Idempotency key was already used')
+      throw new MailServiceConflictError('Idempotency-Key 已使用，请更换后重试')
     }
     if (existing.status === 'sent') {
       return { sent: true as const, idempotencyKey: input.idempotencyKey, replayed: true }
     }
     if (existing.status === 'unknown') {
-      throw new MailServiceConflictError('Mail delivery status is unknown; check Sent before retrying')
+      throw new MailServiceConflictError('邮件发送状态未知，请先检查已发送邮件，再决定是否重试')
     }
-    throw new MailServiceConflictError('Mail request is already in progress')
+    throw new MailServiceConflictError('邮件请求正在处理中，请稍后再试')
   }
 
   await enforceSendRate(bindings, request)
@@ -547,6 +547,6 @@ export async function sendMail(
     } catch {
       // The original pending record remains as a conservative duplicate-send guard.
     }
-    throw new MailServiceConflictError('Mail delivery status is unknown; check Sent before retrying')
+    throw new MailServiceConflictError('邮件发送状态未知，请先检查已发送邮件，再决定是否重试')
   }
 }

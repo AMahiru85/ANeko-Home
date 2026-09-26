@@ -11,13 +11,13 @@ export const GET: APIRoute = async ({ request }) => {
     const url = new URL(request.url)
     const relativeKey = normalizeObjectPath(url.searchParams.get('key') || '')
     const object = await bindings.ANEKO_R2.get(`${getDrivePrefix(bindings)}${relativeKey}`)
-    if (!object) return errorResponse('File not found', 404)
+    if (!object) return errorResponse('未找到文件', 404)
 
     return r2ObjectResponse(object, {
       cacheControl: 'private, max-age=60',
       downloadName: url.searchParams.has('download') ? relativeKey.split('/').at(-1) : undefined,
     })
   } catch {
-    return errorResponse('Invalid file path')
+    return errorResponse('文件路径无效')
   }
 }

@@ -18,14 +18,14 @@ const pagePosts = allPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
 ---
 
 <BlogLayout
-  title={`ANeko Blog 第 ${currentPage} 页 | ANeko - Home`}
+  title={`ANeko - Home 博客第 ${currentPage} 页 | ANeko - Home`}
   description={`浏览 ANeko - Home 博客文章列表第 ${currentPage} 页，继续查看开发实践、系统配置、技术笔记与日常记录。`}
   compactHeader
 >
   <section class="blogIndex blogListingPage" aria-labelledby="blog-page-title">
     <header class="blogListHeader">
       <div>
-        <p>ARTICLES / {String(currentPage).padStart(2, '0')}</p>
+        <p>文章列表 / {String(currentPage).padStart(2, '0')}</p>
         <h1 id="blog-page-title">文章列表</h1>
       </div>
       <span>第 {currentPage} 页 / 共 {totalPages} 页</span>

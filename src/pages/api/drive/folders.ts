@@ -9,7 +9,7 @@ export const prerender = false
 export const POST: APIRoute = async ({ request }) => {
   const bindings = getBindings()
   if (!await verifyAdminRequest(request, bindings)) {
-    return errorResponse('Unauthorized', 401)
+    return errorResponse('未授权访问，请重新验证', 401)
   }
 
   try {
@@ -21,6 +21,6 @@ export const POST: APIRoute = async ({ request }) => {
     await bindings.ANEKO_R2.put(`${getDrivePrefix(bindings)}${folder}.keep`, new Uint8Array())
     return successResponse({ folder }, 201)
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : 'Unable to create folder')
+    return errorResponse(error instanceof Error ? error.message : '创建文件夹失败')
   }
 }

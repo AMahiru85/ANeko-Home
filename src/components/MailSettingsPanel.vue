@@ -2,7 +2,7 @@
   <section class="mailSettings" aria-labelledby="mail-settings-title">
     <header class="mailSettingsHeader">
       <div>
-        <p>MAIL CONNECTION</p>
+        <p>邮箱连接</p>
         <h3 id="mail-settings-title">邮箱设置</h3>
       </div>
       <ShieldCheck :size="21" :stroke-width="1.6" aria-hidden="true" />
@@ -12,7 +12,7 @@
       <section class="mailIdentitySettings">
         <header>
           <div>
-            <p>IDENTITY</p>
+            <p>邮箱身份</p>
             <h4>发件身份</h4>
           </div>
         </header>
@@ -33,7 +33,7 @@
           <header>
             <div class="mailProtocolTitle">
               <Inbox :size="18" :stroke-width="1.7" aria-hidden="true" />
-              <span><p>INCOMING</p><h4>IMAP</h4></span>
+              <span><p>收件服务器</p><h4>IMAP</h4></span>
             </div>
             <span class="mailTlsBadge"><LockKeyhole :size="12" :stroke-width="1.8" aria-hidden="true" />TLS · 993</span>
           </header>
@@ -81,7 +81,7 @@
           <header>
             <div class="mailProtocolTitle">
               <Send :size="18" :stroke-width="1.7" aria-hidden="true" />
-              <span><p>OUTGOING</p><h4>SMTP</h4></span>
+              <span><p>发件服务器</p><h4>SMTP</h4></span>
             </div>
             <span class="mailTlsBadge"><LockKeyhole :size="12" :stroke-width="1.8" aria-hidden="true" />TLS · 465</span>
           </header>
@@ -130,14 +130,14 @@
         <header>
           <div class="mailProtocolTitle">
             <Webhook :size="18" :stroke-width="1.7" aria-hidden="true" />
-            <span><p>OUTBOUND WEBHOOK</p><h4>Webhook 发信</h4></span>
+            <span><p>邮件发送 Webhook</p><h4>Webhook 发信</h4></span>
           </div>
           <span class="mailWebhookSummary">{{ form.webhook.endpoints.length }} 个接口 · {{ form.webhook.templates.length }} 个模板</span>
         </header>
         <div class="mailWebhookWorkspace">
           <section class="mailWebhookBlock">
             <header class="mailWebhookBlockHeader">
-              <div><p>TEMPLATES</p><h5>模板库</h5></div>
+              <div><p>模板</p><h5>模板库</h5></div>
               <button type="button" class="mailIconTextButton" title="新增模板" @click="addTemplate">
                 <Plus :size="14" :stroke-width="1.8" aria-hidden="true" /><span>新增模板</span>
               </button>
@@ -162,7 +162,7 @@
 
           <section class="mailWebhookBlock">
             <header class="mailWebhookBlockHeader">
-              <div><p>ENDPOINTS</p><h5>Webhook 接口</h5></div>
+              <div><p>接口</p><h5>Webhook 接口</h5></div>
               <button type="button" class="mailIconTextButton" title="新增接口" @click="addEndpoint">
                 <Plus :size="14" :stroke-width="1.8" aria-hidden="true" /><span>新增接口</span>
               </button>
@@ -180,7 +180,7 @@
                   <div class="mailField"><span>接口标识</span><code class="mailWebhookIdValue">{{ endpoint.id }}</code></div>
                   <label class="mailField"><span>使用模板</span><select v-model="endpoint.templateId"><option v-for="template in form.webhook.templates" :key="template.id" :value="template.id">{{ template.name }}</option></select></label>
                   <label class="mailField is-wide"><span>接口地址</span><div class="mailWebhookUrl"><input :value="webhookUrl(endpoint.id)" type="text" readonly /><button type="button" class="mailIconButton" title="复制接口地址" aria-label="复制接口地址" @click="copyWebhookEndpoint(endpoint.id)"><Copy :size="14" :stroke-width="1.8" aria-hidden="true" /></button></div></label>
-                  <label class="mailField is-wide"><span>Bearer Token</span><div class="mailWebhookTokenInput"><input v-model="endpoint.token" :type="webhookTokenType(endpoint.id)" maxlength="256" autocomplete="new-password" :disabled="endpoint.clearToken" :placeholder="endpoint.tokenConfigured ? '留空以保留已保存 Token' : '生成或输入至少 32 个字符'" /><button type="button" class="mailIconButton" :title="webhookTokenType(endpoint.id) === 'password' ? '显示 Token' : '隐藏 Token'" :aria-label="webhookTokenType(endpoint.id) === 'password' ? '显示 Token' : '隐藏 Token'" @click="toggleWebhookToken(endpoint.id)"><Eye v-if="webhookTokenType(endpoint.id) === 'password'" :size="14" :stroke-width="1.8" aria-hidden="true" /><EyeOff v-else :size="14" :stroke-width="1.8" aria-hidden="true" /></button><button type="button" class="mailIconButton" :disabled="!endpoint.token" title="复制 Token" aria-label="复制 Token" @click="copyWebhookToken(endpoint.id)"><Copy :size="14" :stroke-width="1.8" aria-hidden="true" /></button><button type="button" class="mailIconButton" title="生成新 Token" aria-label="生成新 Token" @click="generateWebhookToken(endpoint)"><RefreshCw :size="14" :stroke-width="1.8" aria-hidden="true" /></button></div><span class="mailCredentialState"><small>{{ webhookTokenState(endpoint) }}</small><label v-if="endpoint.tokenConfigured"><input v-model="endpoint.clearToken" type="checkbox" @change="handleClearWebhookToken(endpoint)" />清除 Token</label></span></label>
+                  <label class="mailField is-wide"><span>访问令牌（Bearer Token）</span><div class="mailWebhookTokenInput"><input v-model="endpoint.token" :type="webhookTokenType(endpoint.id)" maxlength="256" autocomplete="new-password" :disabled="endpoint.clearToken" :placeholder="endpoint.tokenConfigured ? '留空以保留已保存令牌' : '生成或输入至少 32 个字符'" /><button type="button" class="mailIconButton" :title="webhookTokenType(endpoint.id) === 'password' ? '显示令牌' : '隐藏令牌'" :aria-label="webhookTokenType(endpoint.id) === 'password' ? '显示令牌' : '隐藏令牌'" @click="toggleWebhookToken(endpoint.id)"><Eye v-if="webhookTokenType(endpoint.id) === 'password'" :size="14" :stroke-width="1.8" aria-hidden="true" /><EyeOff v-else :size="14" :stroke-width="1.8" aria-hidden="true" /></button><button type="button" class="mailIconButton" :disabled="!endpoint.token" title="复制令牌" aria-label="复制令牌" @click="copyWebhookToken(endpoint.id)"><Copy :size="14" :stroke-width="1.8" aria-hidden="true" /></button><button type="button" class="mailIconButton" title="生成新令牌" aria-label="生成新令牌" @click="generateWebhookToken(endpoint)"><RefreshCw :size="14" :stroke-width="1.8" aria-hidden="true" /></button></div><span class="mailCredentialState"><small>{{ webhookTokenState(endpoint) }}</small><label v-if="endpoint.tokenConfigured"><input v-model="endpoint.clearToken" type="checkbox" @change="handleClearWebhookToken(endpoint)" />清除令牌</label></span></label>
                   <label class="mailField"><span>固定收件人</span><input v-model.trim="endpoint.to" type="text" autocomplete="off" placeholder="name@example.com" /></label>
                   <label class="mailField"><span>固定抄送</span><input v-model.trim="endpoint.cc" type="text" autocomplete="off" placeholder="多个地址用逗号分隔" /></label>
                 </div>
@@ -211,6 +211,7 @@
 import { reactive, ref, watch } from 'vue'
 import { Copy, Eye, EyeOff, Inbox, LoaderCircle, LockKeyhole, PlugZap, Plus, RefreshCw, Save, Send, ShieldCheck, Trash2, Webhook } from '@lucide/vue'
 import { ApiRequestError, apiRequest } from '../utils/admin-client'
+import { userErrorMessage } from '../utils/user-error'
 
 interface MailProtocolConfig {
   host: string
@@ -321,7 +322,7 @@ function emptyForm(): ConfigForm {
     imap: protocolDefaults(993),
     smtp: protocolDefaults(465),
     webhook: {
-      templates: [{ id: 'default', name: '默认模板', subject: 'Webhook notification', text: '{{json}}' }],
+      templates: [{ id: 'default', name: '默认模板', subject: 'Webhook 通知', text: '{{json}}' }],
       endpoints: [{ id: 'default', name: '默认接口', enabled: false, tokenConfigured: false, token: '', clearToken: false, to: '', cc: '', templateId: 'default' }],
     },
   }
@@ -404,9 +405,9 @@ function handleClearWebhookToken(endpoint: EditableWebhookEndpoint) {
 }
 
 function webhookTokenState(endpoint: EditableWebhookEndpoint) {
-  if (endpoint.clearToken) return '保存后清除 Token'
-  if (endpoint.token) return endpoint.tokenConfigured ? '将轮换已保存 Token' : '将保存新 Token'
-  return endpoint.tokenConfigured ? 'Token 已保存' : '尚未设置 Token'
+  if (endpoint.clearToken) return '保存后清除令牌'
+  if (endpoint.token) return endpoint.tokenConfigured ? '将轮换已保存令牌' : '将保存新令牌'
+  return endpoint.tokenConfigured ? '令牌已保存' : '尚未设置令牌'
 }
 
 async function copyWebhookEndpoint(id = 'default') {
@@ -424,7 +425,7 @@ async function copyWebhookToken(id: string) {
   if (!token) return
   try {
     await navigator.clipboard.writeText(token)
-    emit('notice', 'Webhook Token 已复制')
+    emit('notice', 'Webhook 令牌已复制')
   } catch {
     emit('notice', '无法访问剪贴板，请手动复制', 'error')
   }
@@ -465,10 +466,10 @@ function validateForm() {
     const cc = parseRecipients(item.cc)
     if (recipients.length + cc.length > 20) throw new Error(`接口“${item.name}”的收件人和抄送不能超过 20 个`)
     if (item.enabled && (!recipients.length || (item.clearToken || (!item.tokenConfigured && !item.token)))) {
-      throw new Error(`启用接口“${item.name}”前请填写收件人并设置 Token`)
+      throw new Error(`启用接口“${item.name}”前请填写收件人并设置令牌`)
     }
     if (item.token && (item.token.length < 32 || item.token.length > 256 || !/^[A-Za-z0-9._~-]+$/.test(item.token))) {
-      throw new Error(`接口“${item.name}”的 Token 需为 32–256 个英文字母、数字、点、下划线、波浪号或连字符`)
+      throw new Error(`接口“${item.name}”的令牌需为 32–256 个英文字母、数字、点、下划线、波浪号或连字符`)
     }
     endpointIds.add(item.id)
   }
@@ -530,7 +531,7 @@ async function testConnection(target: TestTarget) {
     if (!/^\S+@\S+\.\S+$/.test(form.address.trim())) throw new Error('邮箱地址格式不正确')
     validateProtocol(target.toUpperCase(), form[target])
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : '请检查连接设置'
+    formError.value = userErrorMessage(error, '请检查连接设置')
     return
   }
   testingTarget.value = target
@@ -553,7 +554,7 @@ async function saveConfig() {
   try {
     validateForm()
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : '请检查邮箱设置'
+    formError.value = userErrorMessage(error, '请检查邮箱设置')
     return
   }
   saving.value = true
@@ -614,14 +615,14 @@ function emptyWebhookConfig(): MailWebhookConfig {
   return {
     revision: null,
     updatedAt: null,
-    templates: [{ id: 'default', name: '默认模板', subject: 'Webhook notification', text: '{{json}}' }],
+    templates: [{ id: 'default', name: '默认模板', subject: 'Webhook 通知', text: '{{json}}' }],
     endpoints: [{ id: 'default', name: '默认接口', enabled: false, tokenConfigured: false, to: [], cc: [], templateId: 'default' }],
   }
 }
 
 function addTemplate() {
   const id = uniqueId('template', form.webhook.templates, latestWebhookConfig?.templates)
-  form.webhook.templates.push({ id, name: '新模板', subject: 'Webhook notification', text: '{{json}}' })
+  form.webhook.templates.push({ id, name: '新模板', subject: 'Webhook 通知', text: '{{json}}' })
 }
 
 function removeTemplate(id: string) {
@@ -662,7 +663,7 @@ function requestError(error: unknown, fallback: string, notifyUnauthorized = tru
     if (notifyUnauthorized) emit('unauthorized')
     return '管理员会话已失效，请重新登录'
   }
-  return error instanceof Error ? error.message : fallback
+  return userErrorMessage(error, fallback)
 }
 
 function formatDate(value: string) {

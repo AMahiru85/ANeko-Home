@@ -17,6 +17,18 @@ export class ApiRequestError extends Error {
   }
 }
 
+function requestErrorMessage(status: number) {
+  if (status === 400) return '请求内容有误，请检查后重试。'
+  if (status === 401) return '登录状态已失效，请重新登录。'
+  if (status === 403) return '当前操作未获授权。'
+  if (status === 404) return '请求的内容不存在或已被删除。'
+  if (status === 408) return '请求超时，请稍后重试。'
+  if (status === 413) return '文件或内容过大，请缩小后重试。'
+  if (status === 429) return '操作过于频繁，请稍后重试。'
+  if (status >= 500) return '服务暂时不可用，请稍后重试。'
+  return '请求失败，请稍后重试。'
+}
+
 export async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(path, options)
   let payload: ApiEnvelope<T>
@@ -24,11 +36,11 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
   try {
     payload = await response.json()
   } catch {
-    throw new ApiRequestError(`HTTP ${response.status}`, response.status)
+    throw new ApiRequestError(requestErrorMessage(response.status), response.status)
   }
 
   if (!response.ok || !payload.success || payload.data === undefined) {
-    throw new ApiRequestError(payload.error || `HTTP ${response.status}`, response.status)
+    throw new ApiRequestError(payload.error || requestErrorMessage(response.status), response.status)
   }
 
   return payload.data
