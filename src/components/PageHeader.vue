@@ -10,7 +10,7 @@
     </div>
 
     <h1 class="welcome">
-      ANeko <span class="gradientText">- Home</span>
+      AN <span class="gradientText">eko  - Home</span>
     </h1>
     <div class="description">🙂 <span class="purpleText">Full Stack</span> Developer</div>
     <div class="description">
