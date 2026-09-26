@@ -75,7 +75,7 @@
             :rel="project.external ? 'noreferrer' : undefined"
           >
             <div class="projectItemLeft">
-              <h1>{{ project.name }}</h1>
+              <h2>{{ project.name }}</h2>
             </div>
             <div class="projectItemRight">
               <img

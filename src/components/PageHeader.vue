@@ -9,9 +9,9 @@
       />
     </div>
 
-    <div class="welcome">
-      Hello I' m <span class="gradientText">ANeko !</span>
-    </div>
+    <h1 class="welcome">
+      ANeko <span class="gradientText">- Home</span>
+    </h1>
     <div class="description">🙂 <span class="purpleText">Full Stack</span> Developer</div>
     <div class="description">
       📝 The only way to do <span class="purpleText textBackground">great</span> is
