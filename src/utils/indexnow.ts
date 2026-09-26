@@ -2,10 +2,30 @@ import { getBindings, getIndexNowKey } from './cloudflare'
 import { POSTS_PER_PAGE, tagToSlug, type StoredBlogPost } from './posts'
 import { SITE_ORIGIN } from './runtime-config'
 
-const INDEXNOW_ENDPOINT = 'https://api.indexnow.org/indexnow'
+const INDEXNOW_ENDPOINTS = [
+  'https://api.indexnow.org/indexnow',
+  'https://www.bing.com/indexnow',
+]
 const INDEXNOW_KEY_PATTERN = /^[A-Za-z0-9-]{8,128}$/
 const MAX_URLS_PER_REQUEST = 10_000
+const REQUEST_TIMEOUT_MS = 5_000
 const siteUrl = new URL(SITE_ORIGIN)
+
+type IndexNowErrorKind = 'configuration' | 'network' | 'upstream'
+
+export class IndexNowError extends Error {
+  readonly kind: IndexNowErrorKind
+  readonly status?: number
+  readonly retryAfter?: string
+
+  constructor(kind: IndexNowErrorKind, message: string, status?: number, retryAfter?: string | null) {
+    super(message)
+    this.name = 'IndexNowError'
+    this.kind = kind
+    this.status = status
+    this.retryAfter = retryAfter || undefined
+  }
+}
 
 function publishedPosts(posts: StoredBlogPost[]) {
   return posts.filter((post) => !post.draft)
@@ -83,13 +103,54 @@ function indexNowUrls(paths: Iterable<string>) {
   return [...urls]
 }
 
-function retryDelayMs(response?: Response) {
-  const retryAfter = response?.headers.get('Retry-After')
+function retryDelayMs(retryAfter?: string | null) {
   if (!retryAfter) return 500
   const seconds = Number(retryAfter)
   if (Number.isFinite(seconds)) return Math.min(Math.max(seconds * 1000, 0), 5000)
   const timestamp = Date.parse(retryAfter)
   return Number.isNaN(timestamp) ? 500 : Math.min(Math.max(timestamp - Date.now(), 0), 5000)
+}
+
+function isRetryableStatus(status: number) {
+  return status === 408 || status === 425 || status === 429 || status >= 500
+}
+
+function sanitizeProviderMessage(message: string, key: string) {
+  return message.replaceAll(key, '[redacted]').replace(/\s+/g, ' ').trim().slice(0, 300)
+}
+
+async function requestIndexNow(endpoint: string, body: string, key: string) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body,
+      signal: controller.signal,
+    })
+    const responseBody = await response.text()
+    if (response.status === 200 || response.status === 202) return response
+
+    const providerMessage = sanitizeProviderMessage(responseBody, key)
+    throw new IndexNowError(
+      'upstream',
+      `IndexNow provider returned HTTP ${response.status}${providerMessage ? `: ${providerMessage}` : ''}`,
+      response.status,
+      response.headers.get('Retry-After'),
+    )
+  } catch (error) {
+    if (error instanceof IndexNowError) throw error
+    throw new IndexNowError(
+      'network',
+      error instanceof Error && error.name === 'AbortError'
+        ? 'IndexNow provider request timed out'
+        : 'Unable to reach an IndexNow provider',
+    )
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 async function submitIndexNowBatch(key: string, urlList: string[]) {
@@ -100,42 +161,42 @@ async function submitIndexNowBatch(key: string, urlList: string[]) {
     urlList,
   })
 
-  let response: Response | undefined
-  let requestError: unknown
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      response = await fetch(INDEXNOW_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body,
-        signal: AbortSignal.timeout(10_000),
-      })
-      if (response.status === 200 || response.status === 202) return
-      if (attempt === 0 && (response.status === 429 || response.status >= 500)) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs(response)))
-        continue
+  let lastError: IndexNowError | undefined
+  for (const endpoint of INDEXNOW_ENDPOINTS) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const response = await requestIndexNow(endpoint, body, key)
+        if (response.status === 200 || response.status === 202) return
+      } catch (error) {
+        const indexNowError = error instanceof IndexNowError
+          ? error
+          : new IndexNowError('network', 'Unable to reach an IndexNow provider')
+        lastError = indexNowError
+
+        if (attempt === 0 && (indexNowError.kind === 'network' || isRetryableStatus(indexNowError.status ?? 0))) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs(indexNowError.retryAfter)))
+          continue
+        }
+
+        if (indexNowError.kind === 'upstream' && !isRetryableStatus(indexNowError.status ?? 0)) {
+          throw indexNowError
+        }
       }
-    } catch (error) {
-      response = undefined
-      requestError = error
-      if (attempt === 0) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelayMs()))
-        continue
-      }
+      break
     }
-    break
+
+    if (!lastError || lastError.kind === 'upstream' && !isRetryableStatus(lastError.status ?? 0)) break
   }
 
-  if (!response && requestError) throw requestError
-  const status = response?.status ?? 0
-  const retryAfter = response?.headers.get('Retry-After')
-  throw new Error(`IndexNow rejected the submission (${status}${retryAfter ? `, retry after ${retryAfter}` : ''})`)
+  throw lastError ?? new IndexNowError('network', 'Unable to reach an IndexNow provider')
 }
 
 export async function submitIndexNow(paths: Iterable<string>) {
   const bindings = getBindings()
   const key = getIndexNowKey(bindings)
-  if (!INDEXNOW_KEY_PATTERN.test(key)) throw new Error('IndexNow key is not configured or invalid')
+  if (!INDEXNOW_KEY_PATTERN.test(key)) {
+    throw new IndexNowError('configuration', 'IndexNow key is not configured or invalid')
+  }
 
   const urlList = indexNowUrls(paths)
   if (!urlList.length) return 0
