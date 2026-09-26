@@ -19,7 +19,8 @@ export const POST: APIRoute = async ({ request }) => {
     const resolved = publicMailWebhook(store, 'default')
     if (!resolved) return mailError('Webhook not found', 404)
     const webhook = { ...resolved, revision: store.revision, updatedAt: store.updatedAt }
-    if (!await verifyWebhookAuthorization(request, webhook.token)) {
+    const body = await readMailJson(request)
+    if (!await verifyWebhookAuthorization(request, webhook.token, body)) {
       return mailError('Unauthorized', 401, { 'WWW-Authenticate': 'Bearer' })
     }
     if (!webhook.enabled) return mailError('Webhook is disabled', 503)
@@ -27,7 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
     const configuration = await readMailConfiguration(bindings)
     assertMailHostsAllowed(bindings, configuration)
 
-    const input = webhookMailInput(webhook, request, await readMailJson(request))
+    const input = webhookMailInput(webhook, request, body)
     return mailSuccess(await sendMail(bindings, configuration, request, input))
   } catch (error) {
     return mailExceptionResponse(error)

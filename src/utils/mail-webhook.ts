@@ -12,19 +12,31 @@ async function digest(value: string) {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(value)))
 }
 
-export async function verifyWebhookAuthorization(request: Request, expectedToken: string) {
+export async function verifyWebhookAuthorization(
+  request: Request,
+  expectedToken: string,
+  value?: unknown,
+) {
   const authorization = request.headers.get('Authorization') || ''
   const match = /^Bearer\s+([^\s]+)$/i.exec(authorization.trim())
-  if (!match || !expectedToken) return false
-  const [providedHash, expectedHash] = await Promise.all([
-    digest(match[1]),
+  const bodyToken = value && typeof value === 'object' && !Array.isArray(value)
+    && typeof (value as JsonRecord).token === 'string'
+    ? (value as JsonRecord).token as string
+    : ''
+  const suppliedTokens = [match?.[1] || '', bodyToken].filter(Boolean)
+  if (!suppliedTokens.length || !expectedToken) return false
+
+  const [expectedHash, ...providedHashes] = await Promise.all([
     digest(expectedToken),
+    ...suppliedTokens.map(digest),
   ])
-  let difference = 0
-  for (let index = 0; index < expectedHash.length; index += 1) {
-    difference |= providedHash[index] ^ expectedHash[index]
-  }
-  return difference === 0
+  return providedHashes.some((providedHash) => {
+    let difference = 0
+    for (let index = 0; index < expectedHash.length; index += 1) {
+      difference |= providedHash[index] ^ expectedHash[index]
+    }
+    return difference === 0
+  })
 }
 
 function webhookData(value: unknown): JsonRecord {
@@ -104,7 +116,8 @@ export function webhookMailInput(
   request: Request,
   value: unknown,
 ): SendMailInput {
-  const data = webhookData(value)
+  const data = { ...webhookData(value) }
+  delete data.token
   return parseSendMailInput({
     idempotencyKey: idempotencyKey(request),
     to: configuration.to,
