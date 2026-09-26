@@ -12,8 +12,8 @@ interface Props {
 }
 
 const {
-  title = 'ANeko - 神奈川精神病院',
-  description = '神奈川精神病院-ANeko - 包含博客、网盘、邮箱、相册等功能',
+  title = 'ANeko - Home',
+  description = 'ANeko - Home - 包含博客、网盘、邮箱、相册等功能',
   keywords = '个人主页,博客,网盘,邮箱,相册',
   loadingMode = 'always',
   breadcrumb,
@@ -26,8 +26,7 @@ const websiteSchema = Astro.url.pathname === '/'
   ? {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
-      name: 'ANeko',
-      alternateName: '神奈川精神病院',
+      name: 'ANeko - Home',
       url: `${SITE_ORIGIN}/`,
     }
   : null
