@@ -52,7 +52,7 @@ export function mailExceptionResponse(error: unknown) {
     return mailError(error.message, 429, { 'Retry-After': String(error.retryAfter) })
   }
   if (error instanceof MailConfigUnavailableError || error instanceof MailServiceUnavailableError) {
-    return mailError('邮箱服务暂时不可用', 503)
+    return mailError(error.message, 503)
   }
   return mailError('邮件操作失败', 500)
 }

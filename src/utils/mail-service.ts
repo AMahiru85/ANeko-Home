@@ -1,4 +1,4 @@
-import { CFImap, type Email as ImapEmail, type Folder } from 'cf-imap'
+import { CFImap, ImapError, type Email as ImapEmail, type Folder } from 'cf-imap'
 import { LogLevel, WorkerMailer } from 'worker-mailer'
 import type { MailBindings, MailConfiguration } from './mail-config'
 import {
@@ -60,9 +60,14 @@ export class MailServiceRateLimitError extends Error {
 }
 
 export class MailServiceUnavailableError extends Error {
-  constructor() {
-    super('邮箱服务暂时不可用')
+  diagnosticCode?: string
+
+  constructor(diagnosticCode?: string) {
+    super(diagnosticCode
+      ? `邮箱连接失败（诊断代码：${diagnosticCode}）`
+      : '邮箱服务暂时不可用')
     this.name = 'MailServiceUnavailableError'
+    this.diagnosticCode = diagnosticCode
   }
 }
 
@@ -104,10 +109,28 @@ function createImap(configuration: MailConfiguration) {
   })
 }
 
+function mailFailureCategory(error: unknown) {
+  if (error instanceof ImapError) return 'SERVER_REJECTED'
+  if (!(error instanceof Error)) return 'UNKNOWN'
+  if (/timed?\s*out|timeout/iu.test(error.message)) return 'TIMEOUT'
+  if (/auth|login|credential|password/iu.test(error.message)) return 'AUTH_REJECTED'
+  if (/socket|network|connect|dns|resolve|refused|reset|tls|certificate/iu.test(error.message)) return 'NETWORK'
+  return 'PROTOCOL'
+}
+
+function reportMailFailure(protocol: 'IMAP' | 'SMTP', phase: string, error: unknown) {
+  const category = mailFailureCategory(error)
+  const errorType = error instanceof Error ? error.name : typeof error
+  console.error(`[mail] ${protocol} operation failed`, { phase, category, errorType })
+  return `${protocol}_${category}`
+}
+
 async function withImap<T>(configuration: MailConfiguration, operation: (imap: CFImap) => Promise<T>) {
   const imap = createImap(configuration)
+  let phase = 'connect'
   try {
     await imap.connect()
+    phase = 'command'
     return await operation(imap)
   } catch (error) {
     if (error instanceof MailServiceInputError
@@ -116,7 +139,7 @@ async function withImap<T>(configuration: MailConfiguration, operation: (imap: C
       || error instanceof MailServiceTooLargeError) {
       throw error
     }
-    throw new MailServiceUnavailableError()
+    throw new MailServiceUnavailableError(reportMailFailure('IMAP', phase, error))
   } finally {
     try {
       await imap.logout()
@@ -148,8 +171,9 @@ async function testSmtpConnection(configuration: MailConfiguration) {
   let mailer: WorkerMailer | undefined
   try {
     mailer = await createMailer(configuration)
-  } catch {
-    throw new MailServiceUnavailableError()
+  } catch (error) {
+    if (error instanceof MailServiceUnavailableError) throw error
+    throw new MailServiceUnavailableError(reportMailFailure('SMTP', 'connect', error))
   } finally {
     if (mailer) {
       try {
@@ -178,7 +202,14 @@ function canSelectFolder(folder: Folder) {
 
 export async function listMailFolders(configuration: MailConfiguration) {
   return withImap(configuration, async (imap) => {
-    const folders = await imap.getFolders('', '*')
+    let namespace = ''
+    try {
+      namespace = (await imap.getNamespaces()).personal[0]?.prefix ?? ''
+    } catch {
+      // Some servers do not implement NAMESPACE; fall back to the root namespace.
+    }
+    const folders = await imap.getFolders(namespace, '*')
+    let statusFailures = 0
     const output: Array<{
       name: string
       delimiter: string
@@ -191,9 +222,13 @@ export async function listMailFolders(configuration: MailConfiguration) {
       let total = 0
       let unread = 0
       if (canSelectFolder(folder)) {
-        const status = await imap.status(folder.name, ['MESSAGES', 'UNSEEN'])
-        total = status.messages || 0
-        unread = status.unseen || 0
+        try {
+          const status = await imap.status(folder.name, ['MESSAGES', 'UNSEEN'])
+          total = status.messages || 0
+          unread = status.unseen || 0
+        } catch {
+          statusFailures += 1
+        }
       }
       output.push({
         name: folder.name,
@@ -202,6 +237,9 @@ export async function listMailFolders(configuration: MailConfiguration) {
         total,
         unread,
       })
+    }
+    if (statusFailures) {
+      console.warn('[mail] Some IMAP folder status queries failed', { count: statusFailures })
     }
     return { folders: output }
   })
