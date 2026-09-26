@@ -1,0 +1,99 @@
+---
+import '../style.css'
+import { ClientRouter } from 'astro:transitions'
+import { SITE_ORIGIN } from '../utils/runtime-config'
+
+interface Props {
+  title?: string
+  description?: string
+  keywords?: string
+  loadingMode?: 'always' | 'blog-entry' | 'app-entry'
+  breadcrumb?: { name: string; path: string }
+}
+
+const {
+  title = 'ANeko - 神奈川精神病院',
+  description = '神奈川精神病院-ANeko - 包含博客、网盘、邮箱、相册等功能',
+  keywords = '个人主页,博客,网盘,邮箱,相册',
+  loadingMode = 'always',
+  breadcrumb,
+} = Astro.props
+
+const enableClientRouter = loadingMode !== 'always'
+
+const canonicalUrl = new URL(Astro.url.pathname, SITE_ORIGIN).href
+const websiteSchema = Astro.url.pathname === '/'
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'ANeko',
+      alternateName: '神奈川精神病院',
+      url: `${SITE_ORIGIN}/`,
+    }
+  : null
+const breadcrumbSchema = breadcrumb
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '主页', item: `${SITE_ORIGIN}/` },
+        { '@type': 'ListItem', position: 2, name: breadcrumb.name, item: new URL(breadcrumb.path, SITE_ORIGIN).href },
+      ],
+    }
+  : null
+---
+
+<!doctype html>
+<html lang="zh-CN" data-loading-mode={loadingMode}>
+  <head>
+    <meta charset="utf-8" />
+    <script is:inline>
+      (() => {
+        const themeCookie = document.cookie
+          .split(';')
+          .map((cookie) => cookie.trim())
+          .find((cookie) => cookie.startsWith('themeState='))
+        const savedTheme = themeCookie?.slice('themeState='.length)
+        const theme = savedTheme === 'Light' || savedTheme === 'Dark'
+          ? savedTheme
+          : window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'Dark'
+            : 'Light'
+
+        document.documentElement.dataset.theme = theme
+
+        const wallpaperPreload = document.createElement('link')
+        wallpaperPreload.rel = 'preload'
+        wallpaperPreload.as = 'image'
+        wallpaperPreload.href = `/static/img/bz-${theme.toLowerCase()}.jpg`
+        document.head.append(wallpaperPreload)
+      })()
+    </script>
+    {enableClientRouter && <ClientRouter fallback="swap" />}
+    <script>
+      document.addEventListener('astro:before-swap', (event) => {
+        const currentTheme = document.documentElement.dataset.theme
+        if (currentTheme) event.newDocument.documentElement.dataset.theme = currentTheme
+      })
+    </script>
+    <title>{title}</title>
+    <link rel="icon" type="image/png" sizes="64x64" href="/static/img/favicon.png" />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta name="description" content={description} />
+    {websiteSchema && <script type="application/ld+json" is:inline set:html={JSON.stringify(websiteSchema)} />}
+    {breadcrumbSchema && <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbSchema)} />}
+    <meta name="keywords" content={keywords} />
+    <meta name="author" content="ANeko" />
+    <meta name="theme-color" content="#202126" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="preload" href="/static/fonts/Ubuntu-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/static/fonts/Pacifico-Regular.ttf" as="font" type="font/ttf" crossorigin />
+  </head>
+  <body>
+    <div id="at-loading" aria-hidden="true" transition:persist="site-loading">
+      <div id="at-loading-center"></div>
+    </div>
+    <div class="at-filter" transition:persist="site-filter"></div>
+    <slot />
+  </body>
+</html>

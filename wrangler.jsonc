@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aneko-home",
+  "compatibility_date": "2026-07-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "ANEKO_KV",
+      "id": "24fd429d27fa4657a6c2572f15e0c44d"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ANEKO_R2",
+      "bucket_name": "aneko-homepage-blog-disk-photos-aneko-r2"
+    }
+  ]
+}

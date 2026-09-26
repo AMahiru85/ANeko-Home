@@ -1,0 +1,60 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro'
+import { formatPostDate, getPublishedPosts, getTagEntries } from '../../utils/posts'
+
+export const prerender = false
+
+const allPosts = await getPublishedPosts()
+const years = new Map<number, typeof allPosts>()
+
+for (const post of allPosts) {
+  const year = post.data.pubDate.getFullYear()
+  years.set(year, [...(years.get(year) ?? []), post])
+}
+
+const archiveYears = Array.from(years.entries()).sort(([a], [b]) => b - a)
+const tagCount = getTagEntries(allPosts).length
+---
+
+<BlogLayout
+  title="文章归档 - ANeko"
+  description="按时间浏览 ANeko Blog 的全部文章。"
+  activeSection="archive"
+  compactHeader
+>
+  <section class="blogArchivePage" aria-labelledby="archive-title">
+    <header class="blogListHeader blogArchivePageHeader">
+      <div>
+        <p>ARCHIVE</p>
+        <h1 id="archive-title">文章归档</h1>
+      </div>
+      <span>{allPosts.length} 篇文章 / {tagCount} 个标签</span>
+    </header>
+
+    {archiveYears.length > 0 ? archiveYears.map(([year, posts]) => (
+      <section class="blogArchiveYear">
+        <div class="blogArchiveYearLabel">
+          <h2>{year}</h2>
+          <span>{posts.length} 篇</span>
+        </div>
+        <div class="blogArchiveTimeline">
+          {posts.map((post) => (
+            <a href={`/blog/${post.id}/`}>
+              <time datetime={post.data.pubDate.toISOString()}>{formatPostDate(post.data.pubDate).slice(5)}</time>
+              <div>
+                <h3>{post.data.title}</h3>
+                <p>{post.data.description}</p>
+              </div>
+              <span>{post.data.tags[0] ?? '随笔'}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )) : (
+      <div class="blogEmptyState">
+        <h2>暂无归档</h2>
+        <p>发布第一篇文章后，这里会按年份自动整理</p>
+      </div>
+    )}
+  </section>
+</BlogLayout>

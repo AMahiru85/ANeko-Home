@@ -1,0 +1,22 @@
+---
+import MailShell from '../../components/MailShell.vue'
+import WorkspaceLayout from '../../layouts/WorkspaceLayout.astro'
+import { getBindings } from '../../utils/cloudflare'
+import { readMailConfiguration } from '../../utils/mail-config'
+
+export const prerender = false
+
+const publicAddress = await Promise.resolve()
+  .then(() => readMailConfiguration(getBindings()))
+  .then((configuration) => configuration.address)
+  .catch(() => '')
+---
+
+<WorkspaceLayout
+  title="邮箱 - ANeko"
+  description="管理员通过 IMAP 和 SMTP 连接已有邮箱。"
+  product="mail"
+  keywords="ANeko,邮箱,Webmail,IMAP,SMTP"
+>
+  <MailShell publicAddress={publicAddress} client:load />
+</WorkspaceLayout>

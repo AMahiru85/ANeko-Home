@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /api/drive/
+Disallow: /api/photos
+Allow: /api/photos/image/
+Disallow: /api/search.json
+
+Sitemap: https://www.aneko.ink/sitemap.xml

@@ -1,0 +1,38 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro'
+import { getPublishedPosts, getTagEntries } from '../../utils/posts'
+
+export const prerender = false
+
+const posts = await getPublishedPosts()
+const tags = getTagEntries(posts)
+const firstYear = posts.at(-1)?.data.pubDate.getFullYear() ?? new Date().getFullYear()
+---
+
+<BlogLayout
+  title="关于 - ANeko"
+  description="这里收集项目开发中的实践、系统配置笔记，以及那些值得留下一份文字记录的日常"
+  activeSection="about"
+  compactHeader
+>
+  <section class="blogAboutPage" aria-labelledby="about-title">
+    <div class="blogAboutIntro">
+      <div class="blogAboutCopy">
+        <p>ABOUT</p>
+        <h1 id="about-title">网络上的一块自留地</h1>
+        <p class="blogAboutLead">ANeko - Blog</p>
+        <p>这里收集项目开发中的实践、系统配置笔记，以及那些值得留下一份文字记录的日常</p>
+        <div class="blogAboutActions">
+          <a href="https://github.com/AMahiru30" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="/" data-astro-reload>返回主页</a>
+        </div>
+      </div>
+    </div>
+
+    <dl class="blogAboutStats">
+      <div><dt>文章</dt><dd>{String(posts.length).padStart(2, '0')}</dd></div>
+      <div><dt>标签</dt><dd>{String(tags.length).padStart(2, '0')}</dd></div>
+      <div><dt>开始记录</dt><dd>{firstYear}</dd></div>
+    </dl>
+  </section>
+</BlogLayout>

@@ -1,0 +1,36 @@
+---
+import BlogPagination from '../../../components/BlogPagination.astro'
+import BlogPostList from '../../../components/BlogPostList.astro'
+import BlogLayout from '../../../layouts/BlogLayout.astro'
+import { getPublishedPosts, POSTS_PER_PAGE } from '../../../utils/posts'
+
+export const prerender = false
+
+const currentPage = Number.parseInt(Astro.params.page || '', 10)
+if (!Number.isInteger(currentPage) || currentPage < 2) return Astro.redirect('/blog/')
+
+const allPosts = await getPublishedPosts()
+const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
+if (currentPage > totalPages) return Astro.redirect('/blog/')
+
+const startIndex = (currentPage - 1) * POSTS_PER_PAGE
+const pagePosts = allPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
+---
+
+<BlogLayout
+  title={`文章第 ${currentPage} 页 - ANeko`}
+  description={`ANeko Blog 文章列表第 ${currentPage} 页。`}
+  compactHeader
+>
+  <section class="blogIndex blogListingPage" aria-labelledby="blog-page-title">
+    <header class="blogListHeader">
+      <div>
+        <p>ARTICLES / {String(currentPage).padStart(2, '0')}</p>
+        <h1 id="blog-page-title">文章列表</h1>
+      </div>
+      <span>第 {currentPage} 页 / 共 {totalPages} 页</span>
+    </header>
+    <BlogPostList posts={pagePosts} startIndex={startIndex} />
+    <BlogPagination currentPage={currentPage} totalPages={totalPages} />
+  </section>
+</BlogLayout>

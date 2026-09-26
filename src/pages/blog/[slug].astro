@@ -1,0 +1,100 @@
+---
+import BlogToc from '../../components/BlogToc.astro'
+import BlogLayout from '../../layouts/BlogLayout.astro'
+import { renderBlogMarkdown } from '../../utils/blog-markdown'
+import { formatPostDate, getBlogPost, getPublishedPosts, getReadingTime, tagToSlug } from '../../utils/posts'
+
+export const prerender = false
+
+const slug = Astro.params.slug || ''
+const [post, allPosts] = await Promise.all([
+  getBlogPost(slug),
+  getPublishedPosts(),
+])
+const rendered = post?.body ? await renderBlogMarkdown(post.body) : null
+const postIndex = post ? allPosts.findIndex((item) => item.id === post.id) : -1
+const nextPost = post && postIndex >= 0 && allPosts.length > 1
+  ? allPosts[(postIndex + 1) % allPosts.length]
+  : null
+
+if (!post) Astro.response.status = 404
+---
+
+<BlogLayout
+  title={post ? `${post.data.title} - ANeko` : '文章未找到 - ANeko'}
+  description={post?.data.description || '未找到请求的博客文章。'}
+  keywords={post ? `ANeko,个人博客,${post.data.tags.join(',')}` : 'ANeko,个人博客'}
+  compactHeader
+>
+  <script>
+    import '../../scripts/blog-code-blocks.js'
+    import '../../scripts/github-cards.js'
+  </script>
+  {post && rendered ? (
+    <article class="blogArticle">
+      <nav class="blogBreadcrumb" aria-label="文章路径">
+        <a href="/blog/">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 18-6-6 6-6"></path>
+          </svg>
+          <span>全部文章</span>
+        </a>
+        <span>/</span>
+        <span>{post.data.tags[0] ?? '随笔'}</span>
+      </nav>
+
+      <header class="blogArticleHeader">
+        <div class="blogArticleMeta">
+          <span>{post.data.tags[0] ?? '随笔'}</span>
+          <time datetime={post.data.pubDate.toISOString()}>{formatPostDate(post.data.pubDate)}</time>
+          <small>{getReadingTime(post)} MIN READ</small>
+          <small>BY {post.data.author.toLocaleUpperCase('zh-CN')}</small>
+        </div>
+        <div class="blogArticleTitle">
+          <h1>{post.data.title}</h1>
+          <p>{post.data.description}</p>
+          {post.data.tags.length > 0 && (
+            <div class="blogArticleTags" aria-label="文章标签">
+              {post.data.tags.map((tag) => (
+                <a href={`/blog/tag/${tagToSlug(tag)}/`}>#{tag}</a>
+              ))}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {post.data.heroImage && (
+        <figure class="blogArticleHero">
+          <img src={post.data.heroImage} alt={post.data.title} loading="eager" decoding="async" />
+        </figure>
+      )}
+
+      <div class="blogArticleContent">
+        <div class="blogArticleBody blogProse" set:html={rendered.html}></div>
+        <BlogToc headings={rendered.headings} />
+      </div>
+
+      {nextPost && (
+        <div class="blogArticleEnd">
+          <div>
+            <p>NEXT NOTE</p>
+            <h2>继续翻阅</h2>
+          </div>
+          <a href={`/blog/${nextPost.id}/`}>
+            <span>{nextPost.data.title}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"></path>
+            </svg>
+          </a>
+        </div>
+      )}
+    </article>
+  ) : (
+    <section class="blogIndex blogListingPage">
+      <div class="blogEmptyState">
+        <h2>文章不存在</h2>
+        <p>这篇文章尚未发布，或已经从 R2 中移除。</p>
+      </div>
+    </section>
+  )}
+</BlogLayout>

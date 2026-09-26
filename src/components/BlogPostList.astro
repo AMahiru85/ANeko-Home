@@ -1,0 +1,40 @@
+---
+import type { BlogPost } from '../utils/posts'
+import { formatPostDate, getReadingTime } from '../utils/posts'
+
+interface Props {
+  posts: BlogPost[]
+  startIndex?: number
+}
+
+const { posts, startIndex = 0 } = Astro.props
+---
+
+<div class="blogPostList">
+  {posts.map((post: BlogPost, index: number) => (
+    <a
+      class="blogPostRow"
+      href={`/blog/${post.id}/`}
+      style={`--post-index: ${index}`}
+    >
+      <span class="blogPostNumber">{String(startIndex + index + 1).padStart(2, '0')}</span>
+      <div class="blogPostSummary">
+        <h3>{post.data.title}</h3>
+        <p>{post.data.description}</p>
+        {post.data.tags.length > 0 && (
+          <div class="blogPostTags" aria-label="文章标签">
+            {post.data.tags.slice(0, 3).map((tag: string) => <span>#{tag}</span>)}
+          </div>
+        )}
+      </div>
+      <div class="blogPostRowMeta">
+        <span>{post.data.tags[0] ?? '随笔'}</span>
+        <time datetime={post.data.pubDate.toISOString()}>{formatPostDate(post.data.pubDate)}</time>
+        <small>{getReadingTime(post)} min</small>
+      </div>
+      <svg class="blogPostArrow" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12h14M13 6l6 6-6 6"></path>
+      </svg>
+    </a>
+  ))}
+</div>

@@ -1,0 +1,15 @@
+---
+import BlogManager from '../../../components/BlogManager.vue'
+import BlogLayout from '../../../layouts/BlogLayout.astro'
+
+export const prerender = false
+---
+
+<BlogLayout
+  title="博客管理 - ANeko"
+  description="管理 ANeko Blog 的文章与附件"
+  activeSection="manage"
+  compactHeader
+>
+  <BlogManager client:load />
+</BlogLayout>

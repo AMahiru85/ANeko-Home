@@ -1,0 +1,27 @@
+---
+interface Heading {
+  depth: number
+  slug: string
+  text: string
+}
+
+interface Props {
+  headings: Heading[]
+}
+
+const { headings } = Astro.props
+const visibleHeadings = headings.filter((heading: Heading) => heading.depth >= 2 && heading.depth <= 3)
+---
+
+{visibleHeadings.length > 0 && (
+  <aside class="blogToc">
+    <p>ON THIS PAGE</p>
+    <nav aria-label="文章目录">
+      {visibleHeadings.map((heading: Heading) => (
+        <a class:list={{ 'is-nested': heading.depth === 3 }} href={`#${heading.slug}`}>
+          {heading.text}
+        </a>
+      ))}
+    </nav>
+  </aside>
+)}

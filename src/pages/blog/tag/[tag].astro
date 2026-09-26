@@ -1,0 +1,37 @@
+---
+import BlogPostList from '../../../components/BlogPostList.astro'
+import BlogLayout from '../../../layouts/BlogLayout.astro'
+import { getPublishedPosts, getTagEntries } from '../../../utils/posts'
+
+export const prerender = false
+
+const allPosts = await getPublishedPosts()
+const tagEntry = getTagEntries(allPosts).find((entry) => entry.slug === Astro.params.tag)
+const tag = tagEntry?.tag || '未找到该标签'
+const posts = tagEntry ? allPosts.filter((post) => post.data.tags.includes(tagEntry.tag)) : []
+if (!tagEntry) Astro.response.status = 404
+---
+
+<BlogLayout
+  title={`#${tag} - ANeko`}
+  description={tagEntry ? `ANeko Blog 中带有 ${tag} 标签的文章` : '未找到该文章标签'}
+  compactHeader
+>
+  <section class="blogIndex blogListingPage" aria-labelledby="tag-page-title">
+    <header class="blogListHeader">
+      <div>
+        <p>TOPIC</p>
+        <h1 id="tag-page-title">#{tag}</h1>
+      </div>
+      <a href="/blog/">全部文章</a>
+    </header>
+    {posts.length > 0 ? (
+      <BlogPostList posts={posts} />
+    ) : (
+      <div class="blogEmptyState">
+        <h2>没有可显示的文章</h2>
+        <p>返回文章列表浏览其他内容</p>
+      </div>
+    )}
+  </section>
+</BlogLayout>

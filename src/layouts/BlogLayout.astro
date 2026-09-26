@@ -1,0 +1,47 @@
+---
+import HeaderIsland from '../components/HeaderIsland.vue'
+import LeftSidebar from '../components/LeftSidebar.vue'
+import PageFooter from '../components/PageFooter.vue'
+import SiteLayout from './SiteLayout.astro'
+
+interface Props {
+  title: string
+  description: string
+  keywords?: string
+  activeSection?: 'articles' | 'archive' | 'about' | 'manage'
+  compactHeader?: boolean
+}
+
+const {
+  title,
+  description,
+  keywords = 'ANeko,个人博客,开发,技术笔记',
+  activeSection = 'articles',
+  compactHeader = false,
+} = Astro.props
+---
+
+<SiteLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  loadingMode="blog-entry"
+  breadcrumb={{ name: '博客', path: '/blog/' }}
+>
+  <main class="at-main blogShell">
+    <LeftSidebar transition:persist="blog-sidebar" />
+    <div class="at-right blogRight">
+      <HeaderIsland
+        page="blog"
+        blogSection={activeSection}
+        compact={compactHeader}
+        client:load
+        transition:persist="blog-header"
+      />
+      <div class="blogRouteContent" transition:name="blog-content">
+        <slot />
+      </div>
+    </div>
+  </main>
+  <PageFooter client:visible />
+</SiteLayout>

@@ -1,0 +1,18 @@
+---
+import HeaderIsland from '../components/HeaderIsland.vue'
+import LeftSidebar from '../components/LeftSidebar.vue'
+import PageContent from '../components/PageContent.vue'
+import PageFooter from '../components/PageFooter.vue'
+import SiteLayout from '../layouts/SiteLayout.astro'
+---
+
+<SiteLayout>
+  <main class="at-main">
+    <LeftSidebar />
+    <div class="at-right">
+      <HeaderIsland page="home" compact={false} blogSection="articles" client:load />
+      <PageContent client:load />
+    </div>
+  </main>
+  <PageFooter client:visible />
+</SiteLayout>

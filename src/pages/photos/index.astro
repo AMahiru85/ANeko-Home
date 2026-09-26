@@ -1,0 +1,14 @@
+---
+import PhotoGallery from '../../components/PhotoGallery.vue'
+import WorkspaceLayout from '../../layouts/WorkspaceLayout.astro'
+
+export const prerender = false
+---
+
+<WorkspaceLayout
+  title="相册 - ANeko"
+  description="从相册取回光影与片刻"
+  product="photos"
+>
+  <PhotoGallery client:load />
+</WorkspaceLayout>

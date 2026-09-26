@@ -1,0 +1,14 @@
+---
+import DriveShell from '../../components/DriveShell.vue'
+import WorkspaceLayout from '../../layouts/WorkspaceLayout.astro'
+
+export const prerender = false
+---
+
+<WorkspaceLayout
+  title="云盘 - ANeko"
+  description="文件、目录与归档"
+  product="drive"
+>
+  <DriveShell client:load />
+</WorkspaceLayout>

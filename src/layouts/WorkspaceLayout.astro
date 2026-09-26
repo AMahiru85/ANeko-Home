@@ -1,0 +1,46 @@
+---
+import HeaderIsland from '../components/HeaderIsland.vue'
+import LeftSidebar from '../components/LeftSidebar.vue'
+import PageFooter from '../components/PageFooter.vue'
+import SiteLayout from './SiteLayout.astro'
+
+interface Props {
+  title: string
+  description: string
+  product: 'photos' | 'drive' | 'mail'
+  keywords?: string
+}
+
+const {
+  title,
+  description,
+  product,
+  keywords = 'ANeko,相册,云盘,Cloudflare,R2,KV',
+} = Astro.props
+
+const breadcrumbs = {
+  photos: { name: '相册', path: '/photos/' },
+  drive: { name: '云盘', path: '/drive/' },
+  mail: { name: '邮箱', path: '/mail/' },
+} as const
+const breadcrumb = breadcrumbs[product]
+---
+
+<SiteLayout
+  title={title}
+  description={description}
+  keywords={keywords}
+  loadingMode="app-entry"
+  breadcrumb={breadcrumb}
+>
+  <main class="at-main blogShell workspaceShell">
+    <LeftSidebar transition:persist="workspace-sidebar" />
+    <div class="at-right blogRight workspaceRight">
+      <HeaderIsland page={product} compact={false} blogSection="articles" client:load />
+      <div class="workspaceRouteContent" transition:name="workspace-content">
+        <slot />
+      </div>
+    </div>
+  </main>
+  <PageFooter client:visible />
+</SiteLayout>

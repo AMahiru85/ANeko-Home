@@ -1,0 +1,80 @@
+---
+import BlogPagination from '../../components/BlogPagination.astro'
+import BlogPostList from '../../components/BlogPostList.astro'
+import BlogLayout from '../../layouts/BlogLayout.astro'
+import { formatPostDate, getPublishedPosts, getReadingTime, getTagEntries, POSTS_PER_PAGE } from '../../utils/posts'
+
+export const prerender = false
+
+const allPosts = await getPublishedPosts()
+const pagePosts = allPosts.slice(0, POSTS_PER_PAGE)
+const featuredPost = pagePosts.find((post) => post.data.featured) ?? pagePosts[0]
+const morePosts = featuredPost ? pagePosts.filter((post) => post.id !== featuredPost.id) : []
+const tags = getTagEntries(allPosts)
+const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
+---
+
+<BlogLayout
+  title="博客 - ANeko"
+  description="代码与日常留下的片段"
+  keywords="ANeko,个人博客,开发,Astro,Vue,Cloudflare"
+>
+  <section class="blogIndex" aria-labelledby="blog-index-title">
+    {featuredPost ? (
+      <>
+        <a class="blogFeatured" href={`/blog/${featuredPost.id}/`}>
+          <div class="blogFeaturedMain">
+            <div class="blogPostMeta">
+              <span>精选文章</span>
+              <time datetime={featuredPost.data.pubDate.toISOString()}>{formatPostDate(featuredPost.data.pubDate)}</time>
+              <span>{featuredPost.data.tags[0] ?? '随笔'}</span>
+            </div>
+            <h2 id="blog-index-title">{featuredPost.data.title}</h2>
+            <p>{featuredPost.data.description}</p>
+            <div class="blogReadLabel">
+              <span>阅读全文</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="blogFeaturedAside" aria-hidden="true">
+            <span>{String(allPosts.length).padStart(2, '0')}</span>
+            <small>{getReadingTime(featuredPost)} MIN READ</small>
+          </div>
+        </a>
+
+        {tags.length > 0 && (
+          <nav class="blogTopicRail" aria-label="文章标签">
+            <span>主题</span>
+            <div>
+              {tags.map(({ tag, slug, count }) => (
+                <a href={`/blog/tag/${slug}/`}>#{tag}<small>{count}</small></a>
+              ))}
+            </div>
+          </nav>
+        )}
+
+        {morePosts.length > 0 && (
+          <>
+            <div class="blogArchiveHeading">
+              <div>
+                <p>ARTICLES</p>
+                <h2>更多文章</h2>
+              </div>
+              <span>{String(morePosts.length).padStart(2, '0')} 篇</span>
+            </div>
+            <BlogPostList posts={morePosts} startIndex={1} />
+          </>
+        )}
+
+        <BlogPagination currentPage={1} totalPages={totalPages} />
+      </>
+    ) : (
+      <div class="blogEmptyState">
+        <h2 id="blog-index-title">暂时没有文章</h2>
+        <p>文章写入 Cloudflare KV 和 R2 后会显示在这里。</p>
+      </div>
+    )}
+  </section>
+</BlogLayout>
