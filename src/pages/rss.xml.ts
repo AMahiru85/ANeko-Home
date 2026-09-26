@@ -37,7 +37,7 @@ export const GET: APIRoute = async () => {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">',
     '  <channel>',
-    '    <title>ANeko - Home 博客</title>',
+    '    <title>ANeko - Home | 博客</title>',
     `    <link>${SITE_ORIGIN}/blog/</link>`,
     `    <atom:link href="${SITE_ORIGIN}/rss.xml" rel="self" type="application/rss+xml" />`,
     '    <description>开发实践、系统配置、技术笔记与日常记录</description>',
