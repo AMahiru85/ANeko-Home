@@ -21,7 +21,7 @@ if (!post) Astro.response.status = 404
 ---
 
 <BlogLayout
-  title={post ? `${post.data.title} | ANeko - Home` : '文章未找到 | ANeko - Home'}
+  title="ANeko - Home 博客"
   description={post?.data.description || '未找到请求的博客文章。'}
   keywords={post ? `ANeko,个人博客,${post.data.tags.join(',')}` : 'ANeko,个人博客'}
   image={post?.data.heroImage}

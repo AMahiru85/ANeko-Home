@@ -34,7 +34,7 @@
     <div class="blogMasthead">
       <p class="blogKicker">ANeko / 博客</p>
       <component :is="compact ? 'div' : 'h1'" class="blogMastheadTitle">
-        ANeko - Home <span class="gradientText">博客</span>
+        ANeko <span class="gradientText">Blog</span>
       </component>
       <p class="blogMastheadCopy">代码与日常留下的片段</p>
     </div>

@@ -13,7 +13,7 @@ if (!tagEntry) Astro.response.status = 404
 ---
 
 <BlogLayout
-  title={`#${tag} 相关文章 | ANeko - Home`}
+  title="ANeko - Home 博客"
   description={tagEntry ? `浏览 ANeko - Home 博客中与 ${tag} 相关的文章，集中查看该主题下的开发实践、技术笔记与日常记录。` : '未找到该文章标签'}
   noindex={!tagEntry}
   compactHeader
