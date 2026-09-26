@@ -7,11 +7,11 @@ import { getPublishedPosts, POSTS_PER_PAGE } from '../../../utils/posts'
 export const prerender = false
 
 const currentPage = Number.parseInt(Astro.params.page || '', 10)
-if (!Number.isInteger(currentPage) || currentPage < 2) return Astro.redirect('/blog/')
+if (!Number.isInteger(currentPage) || currentPage < 2) return Astro.redirect('/blog/', 308)
 
 const allPosts = await getPublishedPosts()
 const totalPages = Math.max(1, Math.ceil(allPosts.length / POSTS_PER_PAGE))
-if (currentPage > totalPages) return Astro.redirect('/blog/')
+if (currentPage > totalPages) return Astro.redirect('/blog/', 308)
 
 const startIndex = (currentPage - 1) * POSTS_PER_PAGE
 const pagePosts = allPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
@@ -19,7 +19,7 @@ const pagePosts = allPosts.slice(startIndex, startIndex + POSTS_PER_PAGE)
 
 <BlogLayout
   title={`ANeko Blog 第 ${currentPage} 页 | ANeko - Home`}
-  description={`ANeko Blog 文章列表第 ${currentPage} 页。`}
+  description={`浏览 ANeko - Home 博客文章列表第 ${currentPage} 页，继续查看开发实践、系统配置、技术笔记与日常记录。`}
   compactHeader
 >
   <section class="blogIndex blogListingPage" aria-labelledby="blog-page-title">

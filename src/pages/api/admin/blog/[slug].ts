@@ -3,6 +3,7 @@ import { verifyAdminRequest } from '../../../../utils/auth'
 import { BLOG_BODY_PREFIX, BLOG_META_PREFIX, getBindings } from '../../../../utils/cloudflare'
 import { errorResponse, successResponse } from '../../../../utils/http'
 import { isValidBlogSlug } from '../../../../utils/blog-config'
+import { blogIndexNowPaths, queueIndexNow } from '../../../../utils/indexnow'
 import {
   calculateReadingTime,
   getStoredPostMetadata,
@@ -68,7 +69,7 @@ export const GET: APIRoute = async ({ params, request }) => {
   })
 }
 
-export const PUT: APIRoute = async ({ params, request }) => {
+export const PUT: APIRoute = async ({ params, request, locals }) => {
   const bindings = getBindings()
   if (!await isAuthorized(request, bindings)) return errorResponse('Unauthorized', 401)
 
@@ -120,6 +121,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
       bindings.ANEKO_KV.put(`${BLOG_META_PREFIX}${slug}`, JSON.stringify(metadata)),
       saveStoredPostIndex(nextIndex),
     ])
+    queueIndexNow(locals.cfContext, blogIndexNowPaths(slug, index, nextIndex))
 
     return successResponse(metadata)
   } catch (error) {
@@ -127,7 +129,7 @@ export const PUT: APIRoute = async ({ params, request }) => {
   }
 }
 
-export const DELETE: APIRoute = async ({ params, request }) => {
+export const DELETE: APIRoute = async ({ params, request, locals }) => {
   const bindings = getBindings()
   if (!await isAuthorized(request, bindings)) return errorResponse('Unauthorized', 401)
 
@@ -136,6 +138,7 @@ export const DELETE: APIRoute = async ({ params, request }) => {
 
   const index = await getStoredPostIndex()
   const existing = index.find((post) => post.slug === slug)
+  const nextIndex = index.filter((post) => post.slug !== slug)
 
   const assetKeys: string[] = []
   let cursor: string | undefined
@@ -152,8 +155,9 @@ export const DELETE: APIRoute = async ({ params, request }) => {
     bindings.ANEKO_R2.delete(existing?.bodyKey || `${BLOG_BODY_PREFIX}${slug}.md`),
     assetKeys.length ? bindings.ANEKO_R2.delete(assetKeys) : Promise.resolve(),
     bindings.ANEKO_KV.delete(`${BLOG_META_PREFIX}${slug}`),
-    saveStoredPostIndex(index.filter((post) => post.slug !== slug)),
+    saveStoredPostIndex(nextIndex),
   ])
+  queueIndexNow(locals.cfContext, blogIndexNowPaths(slug, index, nextIndex))
 
   return successResponse({ deleted: slug })
 }

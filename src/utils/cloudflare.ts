@@ -26,3 +26,7 @@ export function getDrivePrefix(bindings: Env) {
   const prefix = bindings.DRIVE_PREFIX?.trim() || DEFAULT_DRIVE_PREFIX
   return prefix.endsWith('/') ? prefix : `${prefix}/`
 }
+
+export function getIndexNowKey(bindings: Env) {
+  return bindings.INDEXNOW_KEY?.trim() || ''
+}

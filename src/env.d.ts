@@ -14,4 +14,5 @@ interface Env {
   BLOG_INDEX_KEY?: string
   PHOTO_MANIFEST_KEY?: string
   DRIVE_PREFIX?: string
+  INDEXNOW_KEY?: string
 }

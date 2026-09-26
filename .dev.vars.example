@@ -10,3 +10,4 @@ TURNSTILE_HOSTNAMES=localhost,127.0.0.1
 # DRIVE_PREFIX=drive/
 # MAIL_CONFIG_KV_KEY=mail:config:v3
 # MAIL_ALLOWED_HOSTS=imap.example.com,smtp.example.com
+# INDEXNOW_KEY=replace-with-8-to-128-letters-numbers-or-hyphens

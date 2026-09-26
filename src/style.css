@@ -3202,7 +3202,7 @@ body {
   opacity: 0.58;
 }
 
-.blogMasthead h1 {
+.blogMastheadTitle {
   margin: 0;
   font-size: 56px;
   font-weight: 700;
@@ -3210,7 +3210,7 @@ body {
   letter-spacing: 0;
 }
 
-.blogMasthead h1 .gradientText {
+.blogMastheadTitle .gradientText {
   display: inline-block;
   padding: 0.12em 0.24em 0.26em 0.08em;
   margin: -0.12em -0.24em -0.26em -0.08em;
@@ -3229,7 +3229,7 @@ body {
   padding: 38px 0 24px;
 }
 
-.blogPageHeader.is-compact .blogMasthead h1 {
+.blogPageHeader.is-compact .blogMastheadTitle {
   font-size: 40px;
   line-height: 48px;
 }
@@ -3692,7 +3692,7 @@ body {
     padding-top: 56px;
   }
 
-  .blogMasthead h1 {
+  .blogMastheadTitle {
     font-size: 48px;
     line-height: 57px;
   }
@@ -3714,7 +3714,7 @@ body {
     padding: 46px 0 28px;
   }
 
-  .blogMasthead h1 {
+  .blogMastheadTitle {
     font-size: 42px;
     line-height: 52px;
   }
@@ -3864,12 +3864,12 @@ body {
 }
 
 @media (max-width: 380px) {
-  .blogMasthead h1 {
+  .blogMastheadTitle {
     font-size: 37px;
     line-height: 47px;
   }
 
-  .blogPageHeader.is-compact .blogMasthead h1 {
+  .blogPageHeader.is-compact .blogMastheadTitle {
     font-size: 34px;
     line-height: 42px;
   }

@@ -1,6 +1,6 @@
-# ANeko Home
+# ANeko - Home
 
-ANeko Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Workers 构建的个人站点，集成仪表盘、导航、博客、相册、网盘、邮箱和后台管理功能。
+ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Workers 构建的个人站点，集成仪表盘、导航、博客、相册、网盘、邮箱和后台管理功能。
 
 ## 目录
 
@@ -24,6 +24,7 @@ ANeko Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Worke
 - **Cloudflare R2**：保存博客正文、博客附件、相册图片和网盘文件。
 - **Cloudflare Turnstile**：管理登录的人机验证。
 - **IMAP / SMTP**：连接已有邮箱。
+- **IndexNow**：文章发布、更新、撤回或删除后异步通知支持该协议的搜索引擎。
 
 依赖版本与脚本以 [package.json](<package.json>) 为准；运行模式见 [astro.config.mjs](<astro.config.mjs>)。
 
@@ -153,6 +154,7 @@ pnpm exec wrangler r2 bucket create aneko-home-storage
 ```sh
 pnpm exec wrangler secret put ACCESS_CODE --config wrangler.jsonc
 pnpm exec wrangler secret put TURNSTILE_SECRET --config wrangler.jsonc
+pnpm exec wrangler secret put INDEXNOW_KEY --config wrangler.jsonc
 ```
 
 首次执行时，若 Wrangler 提示目标 Worker 不存在，可按提示创建同名 Worker，再继续上传密钥。若当前工具版本不提供此流程，可先执行下一步的首次部署，再立即补齐密钥；密钥配置完成前不要开放站点使用。
@@ -182,6 +184,7 @@ astro build && wrangler deploy --config dist/server/wrangler.json
 
 - [ ] 首页、博客、相册、网盘和邮箱页面能正常打开。
 - [ ] `/sitemap.xml` 和 `/robots.txt` 中的域名正确。
+- [ ] 访问运行时配置对应的 `/{INDEXNOW_KEY}.txt`，确认返回 key 本身；在博客管理页执行一次“提交收录”。
 - [ ] `/admin/blog/` 可以完成 Turnstile 验证与访问码登录。
 - [ ] 能创建测试文章、上传图片并在前台查看，验证 KV/R2 写入与读取。
 - [ ] 网盘能上传、列出并下载一个无敏感信息的测试文件。
@@ -210,6 +213,7 @@ pnpm exec wrangler tail --config wrangler.jsonc
 | `PHOTO_MANIFEST_KEY` | 普通变量；可选 | 相册清单的 KV Key，默认 `photos` |
 | `DRIVE_PREFIX` | 普通变量；可选 | 网盘 R2 对象前缀，默认 `drive/` |
 | `MAIL_CONFIG_KV_KEY` | 普通变量；可选 | 邮件配置的 KV Key，默认 `mail:config:v3` |
+| `INDEXNOW_KEY` | Secret；启用 IndexNow 时必需 | 8 至 128 位随机字母、数字或连字符；无默认值，不要提交、记录或分享 |
 
 普通生产变量建议统一维护在 [wrangler.jsonc](<wrangler.jsonc>) 的 `vars` 中，避免控制台配置与下次代码部署不一致。本地则写入 `.dev.vars`。
 
@@ -218,6 +222,8 @@ pnpm exec wrangler tail --config wrangler.jsonc
 ### 博客
 
 新 KV/R2 没有内容时，博客列表为空是正常情况。通过 `/admin/blog/` 登录后创建内容，无需预先导入 SQL 或手工生成文章索引。
+
+公开文章保存或删除成功后会自动向 IndexNow 提交受影响的文章、列表、归档、标签和分页 URL。管理页中的“提交收录”按钮可批量提交当前所有公开页面。服务端会通过站点根目录下不可猜测的同名 `.txt` 路由向搜索引擎验证 key；不要把 key 或完整验证地址写入仓库、日志和公开文档。
 
 博客索引和文章元数据位于 KV，正文位于 R2 的 `blog/posts/`，附件位于 `blog/assets/`。迁移时必须同时迁移 KV 和 R2，不能只复制其中一项。
 

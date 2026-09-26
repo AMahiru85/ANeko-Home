@@ -1,8 +1,8 @@
 User-agent: *
 Allow: /
-Disallow: /admin/
 Disallow: /api/admin/
 Disallow: /api/drive/
+Disallow: /api/mail/
 Disallow: /api/photos
 Allow: /api/photos/image/
 Disallow: /api/search.json

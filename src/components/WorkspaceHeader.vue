@@ -13,7 +13,7 @@
 
     <div class="blogMasthead workspaceMasthead">
       <p class="blogKicker">{{ currentProduct.kicker }}</p>
-      <h1>ANeko <span class="gradientText">{{ currentProduct.name }}</span></h1>
+      <h1 class="blogMastheadTitle">ANeko <span class="gradientText">{{ currentProduct.name }}</span></h1>
       <p class="blogMastheadCopy">{{ currentProduct.copy }}</p>
     </div>
   </header>

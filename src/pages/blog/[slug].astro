@@ -24,6 +24,15 @@ if (!post) Astro.response.status = 404
   title={post ? `${post.data.title} | ANeko - Home` : '文章未找到 | ANeko - Home'}
   description={post?.data.description || '未找到请求的博客文章。'}
   keywords={post ? `ANeko,个人博客,${post.data.tags.join(',')}` : 'ANeko,个人博客'}
+  image={post?.data.heroImage}
+  noindex={!post}
+  article={post ? {
+    headline: post.data.title,
+    publishedTime: post.data.pubDate.toISOString(),
+    modifiedTime: post.data.updatedDate?.toISOString(),
+    author: post.data.author,
+    tags: post.data.tags,
+  } : undefined}
   compactHeader
 >
   <script>
@@ -92,7 +101,7 @@ if (!post) Astro.response.status = 404
   ) : (
     <section class="blogIndex blogListingPage">
       <div class="blogEmptyState">
-        <h2>文章不存在</h2>
+        <h1>文章不存在</h1>
         <p>这篇文章尚未发布，或已经从 R2 中移除。</p>
       </div>
     </section>

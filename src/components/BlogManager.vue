@@ -3,7 +3,7 @@
     <header class="managerToolbar">
       <div>
         <p>CONTENT WORKSPACE</p>
-        <h2 id="blog-manager-title">文章管理</h2>
+        <h1 id="blog-manager-title">文章管理</h1>
       </div>
 
       <div class="managerCommands">
@@ -15,6 +15,10 @@
         <button type="button" :disabled="!isAuthenticated || status === 'loading'" title="刷新" @click="loadPosts">
           <RefreshCw :size="15" :stroke-width="1.8" aria-hidden="true" />
           <span>刷新</span>
+        </button>
+        <button type="button" :disabled="!isAuthenticated || indexNowSubmitting" title="向搜索引擎提交公开页面" @click="submitSiteToIndexNow">
+          <Send :size="15" :stroke-width="1.8" aria-hidden="true" />
+          <span>提交收录</span>
         </button>
         <button
           type="button"
@@ -256,6 +260,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Send,
   Trash2,
   Upload,
   X,
@@ -327,6 +332,7 @@ const editorOpen = ref(false)
 const editorLoading = ref(false)
 const editorSaving = ref(false)
 const editorClosing = ref(false)
+const indexNowSubmitting = ref(false)
 const editorError = ref('')
 const originalSlug = ref('')
 const assetUploading = ref(false)
@@ -386,6 +392,22 @@ async function loadPosts() {
   } catch (error) {
     status.value = 'error'
     errorMessage.value = error instanceof Error ? error.message : '无法读取文章'
+  }
+}
+
+async function submitSiteToIndexNow() {
+  if (!accessCode.value || indexNowSubmitting.value) return
+  indexNowSubmitting.value = true
+  try {
+    const result = await apiRequest<{ submitted: number }>('/api/admin/indexnow', {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    showNotice(`已向 IndexNow 提交 ${result.submitted} 个公开页面`)
+  } catch (error) {
+    showNotice(error instanceof Error ? error.message : 'IndexNow 提交失败', 'error')
+  } finally {
+    indexNowSubmitting.value = false
   }
 }
 
@@ -750,7 +772,7 @@ onBeforeUnmount(() => {
   opacity: 0.5;
 }
 
-.managerToolbar h2 { margin: 5px 0 0; font-size: 25px; line-height: 32px; }
+.managerToolbar h1 { margin: 5px 0 0; font-size: 25px; line-height: 32px; }
 .managerCommands { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
 .managerFileInput { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 

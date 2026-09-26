@@ -8,6 +8,15 @@ interface Props {
   title: string
   description: string
   keywords?: string
+  image?: string
+  noindex?: boolean
+  article?: {
+    headline: string
+    publishedTime: string
+    modifiedTime?: string
+    author: string
+    tags?: string[]
+  }
   activeSection?: 'articles' | 'archive' | 'about' | 'manage'
   compactHeader?: boolean
 }
@@ -16,6 +25,9 @@ const {
   title,
   description,
   keywords = 'ANeko,个人博客,开发,技术笔记',
+  image,
+  noindex = false,
+  article,
   activeSection = 'articles',
   compactHeader = false,
 } = Astro.props
@@ -25,6 +37,9 @@ const {
   title={title}
   description={description}
   keywords={keywords}
+  image={image}
+  noindex={noindex}
+  article={article}
   loadingMode="blog-entry"
   breadcrumb={{ name: '博客', path: '/blog/' }}
 >

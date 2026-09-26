@@ -1,12 +1,21 @@
 ---
 import '../style.css'
 import { ClientRouter } from 'astro:transitions'
-import { SITE_ORIGIN } from '../utils/runtime-config'
+import { canonicalPathname, SITE_ORIGIN } from '../utils/runtime-config'
 
 interface Props {
   title?: string
   description?: string
   keywords?: string
+  image?: string
+  noindex?: boolean
+  article?: {
+    headline: string
+    publishedTime: string
+    modifiedTime?: string
+    author: string
+    tags?: string[]
+  }
   loadingMode?: 'always' | 'blog-entry' | 'app-entry'
   breadcrumb?: { name: string; path: string }
 }
@@ -15,18 +24,34 @@ const {
   title = 'ANeko - Home | 个人主页、技术博客与在线工具',
   description = 'ANeko - Home 是 ANeko 的个人主页，汇集技术博客、在线云盘、网页邮箱和照片相册，记录开发实践、系统配置与日常片段，并提供常用在线服务入口。',
   keywords = '个人主页,博客,网盘,邮箱,相册',
+  image = '/static/img/logo.jpg',
+  noindex = false,
+  article,
   loadingMode = 'always',
   breadcrumb,
 } = Astro.props
 
 const enableClientRouter = loadingMode !== 'always'
 
-const canonicalUrl = new URL(Astro.url.pathname, SITE_ORIGIN).href
+const canonicalUrl = new URL(canonicalPathname(Astro.url.pathname), SITE_ORIGIN).href
+const defaultSocialImageUrl = new URL('/static/img/logo.jpg', SITE_ORIGIN).href
+let socialImageUrl = defaultSocialImageUrl
+try {
+  const candidate = new URL(image, SITE_ORIGIN)
+  if (candidate.protocol === 'http:' || candidate.protocol === 'https:') socialImageUrl = candidate.href
+} catch {
+  // Keep the default image when an article contains an invalid image URL.
+}
+const robots = noindex
+  ? 'noindex, nofollow'
+  : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'
 const websiteSchema = Astro.url.pathname === '/'
   ? {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
       name: 'ANeko - Home',
+      description,
+      inLanguage: 'zh-CN',
       url: `${SITE_ORIGIN}/`,
     }
   : null
@@ -40,6 +65,28 @@ const breadcrumbSchema = breadcrumb
       ],
     }
   : null
+const articleSchema = article
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: article.headline,
+      description,
+      image: socialImageUrl,
+      datePublished: article.publishedTime,
+      dateModified: article.modifiedTime || article.publishedTime,
+      author: { '@type': 'Person', name: article.author },
+      publisher: {
+        '@type': 'Organization',
+        name: 'ANeko - Home',
+        url: `${SITE_ORIGIN}/`,
+        logo: { '@type': 'ImageObject', url: defaultSocialImageUrl },
+      },
+      mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
+      inLanguage: 'zh-CN',
+      keywords: article.tags?.join(', '),
+    }
+  : null
+const jsonLd = (value: object) => JSON.stringify(value).replaceAll('<', '\\u003c')
 ---
 
 <!doctype html>
@@ -78,9 +125,28 @@ const breadcrumbSchema = breadcrumb
     <title>{title}</title>
     <link rel="icon" type="image/png" sizes="64x64" href="/static/img/favicon.png" />
     <link rel="canonical" href={canonicalUrl} />
+    <link rel="alternate" type="application/rss+xml" title="ANeko - Home 博客" href={`${SITE_ORIGIN}/rss.xml`} />
     <meta name="description" content={description} />
-    {websiteSchema && <script type="application/ld+json" is:inline set:html={JSON.stringify(websiteSchema)} />}
-    {breadcrumbSchema && <script type="application/ld+json" is:inline set:html={JSON.stringify(breadcrumbSchema)} />}
+    <meta name="robots" content={robots} />
+    <meta property="og:site_name" content="ANeko - Home" />
+    <meta property="og:type" content={article ? 'article' : 'website'} />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:alt" content={title} />
+    <meta name="twitter:card" content={article?.headline && image ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    {article && <meta property="article:published_time" content={article.publishedTime} />}
+    {article?.modifiedTime && <meta property="article:modified_time" content={article.modifiedTime} />}
+    {article?.author && <meta property="article:author" content={article.author} />}
+    {article?.tags?.map((tag) => <meta property="article:tag" content={tag} />)}
+    {websiteSchema && <script type="application/ld+json" is:inline set:html={jsonLd(websiteSchema)} />}
+    {breadcrumbSchema && <script type="application/ld+json" is:inline set:html={jsonLd(breadcrumbSchema)} />}
+    {articleSchema && <script type="application/ld+json" is:inline set:html={jsonLd(articleSchema)} />}
     <meta name="keywords" content={keywords} />
     <meta name="author" content="ANeko" />
     <meta name="theme-color" content="#202126" />
