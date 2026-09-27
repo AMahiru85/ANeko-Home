@@ -99,18 +99,21 @@ test('manual submission sends keyLocation to the provider without a self-fetch',
   assert.equal(data.status, 'accepted')
   assert.equal(data.accepted, 7)
   assert.equal(data.pending, 0)
-  assert.equal(harness.calls.length, 1)
+  assert.equal(harness.calls.length, 2)
   assert.equal(harness.calls[0].url, 'https://api.indexnow.org/indexnow')
+  assert.equal(harness.calls[1].url, 'https://www.bing.com/indexnow')
   assert.equal(harness.calls[0].init.method, 'POST')
+  assert.equal(harness.calls[1].init.method, 'POST')
   assert.equal(harness.calls[0].init.redirect, 'manual')
   const body = JSON.parse(harness.calls[0].init.body)
+  assert.deepEqual(JSON.parse(harness.calls[1].init.body), body)
   assert.equal(body.host, 'www.aneko.ink')
   assert.equal(body.keyLocation, `${origin}/${testKey}.txt`)
   assert.equal(body.key, testKey)
   assert.deepEqual({ ...harness.postReads[0] }, { refresh: true, allowStale: false })
 })
 
-test('202 means pending key verification and does not trigger another provider', async () => {
+test('202 means pending key verification from both providers', async () => {
   const harness = setup({ fetch: () => new Response('', { status: 202 }) })
   const response = await harness.submit()
   assert.equal(response.status, 202)
@@ -119,7 +122,11 @@ test('202 means pending key verification and does not trigger another provider',
   assert.equal(data.submitted, 7)
   assert.equal(data.pending, 7)
   assert.equal(data.accepted, 0)
-  assert.equal(harness.calls.length, 1)
+  assert.equal(harness.calls.length, 2)
+  assert.deepEqual(data.providerResults.map(({ provider, state }) => ({ provider, state })), [
+    { provider: 'IndexNow', state: 'pending' },
+    { provider: 'Bing', state: 'pending' },
+  ])
 })
 
 test('URLs are normalized, deduplicated, and restricted to the canonical origin', async () => {
@@ -187,7 +194,7 @@ test('403 and 422 have safe Chinese diagnostics and never echo upstream content'
       assert.equal(body.includes(testKey), false)
       assert.equal(JSON.stringify(harness.logs).includes(testKey), false)
       assert.equal(canceled, true)
-      assert.equal(harness.calls.length, 1)
+      assert.equal(harness.calls.length, 2)
     })
   }
 })
@@ -199,12 +206,33 @@ test('429 and Retry-After stop immediately and preserve the provider delay', asy
       const response = await harness.submit()
       assert.equal(response.status, status)
       assert.equal(response.headers.get('Retry-After'), delay)
-      assert.equal(harness.calls.length, 1)
+      assert.equal(harness.calls.length, 2)
       const { error, diagnostic } = await response.json()
       assert.match(error, status === 429 ? /过于频繁/ : /服务暂时异常/)
       assert.equal(diagnostic.upstreamStatus, status)
+      assert.equal(diagnostic.providerResults.length, 2)
+      assert.ok(diagnostic.providerResults.every(({ status: providerStatus }) => providerStatus === status))
     })
   }
+})
+
+test('manual submission reports partial success when one provider rate limits the request', async () => {
+  const harness = setup({ fetch: ({ url }) => new Response('', {
+    status: url === 'https://api.indexnow.org/indexnow' ? 429 : 200,
+    headers: url === 'https://api.indexnow.org/indexnow' ? { 'Retry-After': '3600' } : {},
+  }) })
+  const response = await harness.submit()
+  assert.equal(response.status, 200)
+  const { data } = await response.json()
+  assert.equal(data.submitted, 7)
+  assert.equal(data.accepted, 7)
+  assert.equal(data.pending, 0)
+  assert.deepEqual(data.providerResults.map(({ provider, state, status }) => ({ provider, state, status })), [
+    { provider: 'IndexNow', state: 'failed', status: 429 },
+    { provider: 'Bing', state: 'accepted', status: 200 },
+  ])
+  assert.equal(data.providerResults[0].retryAfter, '3600')
+  assert.equal(harness.calls.length, 2)
 })
 
 test('provider redirects are reported without following or disguising them as network failures', async (t) => {
@@ -223,8 +251,8 @@ test('provider redirects are reported without following or disguising them as ne
       assert.match(result.error, /重定向/)
       assert.equal(text.includes(testKey), false)
       assert.equal(JSON.stringify(harness.logs).includes(testKey), false)
-      assert.equal(harness.calls.length, 1)
-      assert.equal(harness.calls[0].init.redirect, 'manual')
+      assert.equal(harness.calls.length, 2)
+      assert.ok(harness.calls.every(({ init }) => init.redirect === 'manual'))
     })
   }
 })

@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const result = await submitIndexNow(allIndexNowPaths(posts))
+    const result = await submitIndexNow(allIndexNowPaths(posts), { allProviders: true })
     return successResponse(result, result.pending > 0 ? 202 : 200)
   } catch (error) {
     if (error instanceof IndexNowError) {
@@ -57,6 +57,7 @@ export const POST: APIRoute = async ({ request }) => {
           upstreamStatus: error.status,
           retryAfter: error.retryAfter,
           progress,
+          providerResults: error.providerResults ?? progress?.providerResults ?? [],
         },
       }, status)
       if (error.retryAfter) response.headers.set('Retry-After', error.retryAfter)

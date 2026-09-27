@@ -400,13 +400,27 @@ async function submitSiteToIndexNow() {
   if (!accessCode.value || indexNowSubmitting.value) return
   indexNowSubmitting.value = true
   try {
-    const result = await apiRequest<{ submitted: number; accepted: number; pending: number }>('/api/admin/indexnow', {
+    const result = await apiRequest<{
+      submitted: number
+      accepted: number
+      pending: number
+      providerResults: Array<{ provider: string; state: 'accepted' | 'pending' | 'failed'; status?: number }>
+    }>('/api/admin/indexnow', {
       method: 'POST',
       headers: authHeaders(),
     })
-    showNotice(result.pending > 0
-      ? `IndexNow 已接收 ${result.submitted} 个公开页面，其中 ${result.pending} 个正在等待密钥验证。无需立即重复提交，收录由搜索引擎决定。`
-      : `IndexNow 已接收 ${result.submitted} 个公开页面。收录由搜索引擎决定。`)
+    const providerStatus = result.providerResults.map(({ provider, state, status }) => {
+      const label = provider === 'IndexNow' ? '主接口' : provider
+      if (state === 'accepted') return `${label}已接收（HTTP ${status}）`
+      if (state === 'pending') return `${label}已接收，等待验证（HTTP ${status}）`
+      if (status === 429) return `${label}限流（HTTP 429）`
+      return `${label}未接收（${status ? `HTTP ${status}` : '网络错误'}）`
+    }).join('；')
+    const partialFailure = result.providerResults.some(({ state }) => state === 'failed')
+    const acceptance = result.pending > 0
+      ? `已接收 ${result.submitted} 个页面，等待验证 ${result.pending} 个。`
+      : `已接收 ${result.submitted} 个公开页面。`
+    showNotice(`${partialFailure ? '部分成功。' : ''}${providerStatus}。${acceptance}无需立即重复提交。`, partialFailure ? 'error' : 'success')
   } catch (error) {
     showNotice(userErrorMessage(error, 'IndexNow 提交失败，请稍后重试。'), 'error')
   } finally {

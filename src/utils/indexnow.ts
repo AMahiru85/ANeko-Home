@@ -25,6 +25,7 @@ export class IndexNowError extends Error {
   readonly provider?: string
   readonly code: string
   progress?: IndexNowSubmissionResult
+  providerResults?: IndexNowProviderResult[]
 
   constructor(
     kind: IndexNowErrorKind,
@@ -51,6 +52,15 @@ export interface IndexNowSubmissionResult {
   pending: number
   status: 'empty' | 'accepted' | 'pending'
   providers: string[]
+  providerResults: IndexNowProviderResult[]
+}
+
+export interface IndexNowProviderResult {
+  provider: string
+  state: 'accepted' | 'pending' | 'failed'
+  status?: number
+  message?: string
+  retryAfter?: string
 }
 
 export function isValidIndexNowKey(key: string) {
@@ -242,6 +252,66 @@ async function submitIndexNowBatch(key: string, urlList: string[], deadline: num
   throw lastError ?? new IndexNowError('network', '暂时无法连接 IndexNow，请稍后重试。')
 }
 
+async function submitIndexNowBatchToAllProviders(key: string, urlList: string[], deadline: number) {
+  const body = JSON.stringify({
+    host: siteUrl.hostname,
+    key,
+    keyLocation: new URL(`/${key}.txt`, siteUrl).href,
+    urlList,
+  })
+  const outcomes = await Promise.all(INDEXNOW_ENDPOINTS.map(async (endpoint): Promise<{
+    result: IndexNowProviderResult
+    error?: IndexNowError
+  }> => {
+    const provider = PROVIDER_NAMES[endpoint] ?? 'IndexNow'
+    try {
+      const response = await requestIndexNow(endpoint, body, deadline)
+      return {
+        result: {
+          provider,
+          state: response.status === 200 ? 'accepted' : 'pending',
+          status: response.status,
+        },
+      }
+    } catch (error) {
+      const providerError = error instanceof IndexNowError
+        ? error
+        : new IndexNowError('network', `暂时无法连接 ${provider}，请稍后重试。`, undefined, undefined, provider, 'provider_network')
+      return {
+        result: {
+          provider,
+          state: 'failed',
+          status: providerError.status,
+          message: providerError.message,
+          retryAfter: providerError.retryAfter,
+        },
+        error: providerError,
+      }
+    }
+  }))
+  const providerResults = outcomes.map((outcome) => outcome.result)
+  const accepted = outcomes.some((outcome) => outcome.result.state === 'accepted')
+  const pending = outcomes.some((outcome) => outcome.result.state === 'pending')
+  if (!accepted && !pending) {
+    const errors = outcomes.flatMap((outcome) => outcome.error ? [outcome.error] : [])
+    const preferredError = errors.find((error) => error.retryAfter || error.status === 429) ?? errors[0]
+    const summary = outcomes.map(({ result }) =>
+      `${result.provider}：${result.message ?? '提交失败，请稍后重试。'}`,
+    ).join('；')
+    const error = new IndexNowError(
+      preferredError?.kind ?? 'network',
+      `主接口和 Bing 均未接收：${summary}`,
+      preferredError?.status,
+      preferredError?.retryAfter,
+      preferredError?.provider,
+      preferredError?.code ?? 'provider_rejected',
+    )
+    error.providerResults = providerResults
+    throw error
+  }
+  return { providerResults, accepted, pending }
+}
+
 export function indexNowUpstreamHint(status: number) {
   if (status === 400) return '提交数据格式无效，请重试；若持续发生，请检查站点主机名和提交网址。'
   if (status === 403) return '密钥验证失败。请确认 Worker 的 INDEXNOW_KEY 与公开密钥文件内容完全一致，且密钥文件可通过 HTTPS 访问。'
@@ -253,6 +323,7 @@ export function indexNowUpstreamHint(status: number) {
 
 export async function submitIndexNow(
   paths: Iterable<string>,
+  options: { allProviders?: boolean } = {},
 ): Promise<IndexNowSubmissionResult> {
   const deadline = Date.now() + SUBMISSION_TIMEOUT_MS
   const bindings = getBindings()
@@ -263,7 +334,13 @@ export async function submitIndexNow(
 
   const urlList = indexNowUrls(paths)
   const result: IndexNowSubmissionResult = {
-    requested: urlList.length, submitted: 0, accepted: 0, pending: 0, status: 'empty', providers: [],
+    requested: urlList.length,
+    submitted: 0,
+    accepted: 0,
+    pending: 0,
+    status: 'empty',
+    providers: [],
+    providerResults: [],
   }
   if (!urlList.length) return result
 
@@ -272,16 +349,37 @@ export async function submitIndexNow(
     // can reach a different origin, so it cannot reliably verify this route.
     for (let offset = 0; offset < urlList.length; offset += MAX_URLS_PER_REQUEST) {
       const batch = urlList.slice(offset, offset + MAX_URLS_PER_REQUEST)
-      const response = await submitIndexNowBatch(key, batch, deadline)
-      result.submitted += batch.length
-      if (response.status === 200) result.accepted += batch.length
-      else result.pending += batch.length
+      if (options.allProviders) {
+        const batchResult = await submitIndexNowBatchToAllProviders(key, batch, deadline)
+        result.providerResults.push(...batchResult.providerResults)
+        result.submitted += batch.length
+        if (batchResult.accepted) result.accepted += batch.length
+        else if (batchResult.pending) result.pending += batch.length
+        for (const providerResult of batchResult.providerResults) {
+          if (providerResult.state !== 'failed' && !result.providers.includes(providerResult.provider)) {
+            result.providers.push(providerResult.provider)
+          }
+        }
+      } else {
+        const response = await submitIndexNowBatch(key, batch, deadline)
+        result.submitted += batch.length
+        if (response.status === 200) result.accepted += batch.length
+        else result.pending += batch.length
+        if (!result.providers.includes(response.provider)) result.providers.push(response.provider)
+        result.providerResults.push({
+          provider: response.provider,
+          state: response.status === 200 ? 'accepted' : 'pending',
+          status: response.status,
+        })
+      }
       result.status = result.pending > 0 ? 'pending' : 'accepted'
-      if (!result.providers.includes(response.provider)) result.providers.push(response.provider)
     }
     return result
   } catch (error) {
-    if (error instanceof IndexNowError) error.progress = result
+    if (error instanceof IndexNowError) {
+      if (error.providerResults) result.providerResults.push(...error.providerResults)
+      error.progress = result
+    }
     throw error
   }
 }

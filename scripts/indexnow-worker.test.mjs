@@ -13,6 +13,7 @@ const miniflareVersion = wranglerRequire('miniflare/package.json').version
 const workerdVersion = wranglerRequire('workerd/package.json').version
 const origin = 'https://www.aneko.ink'
 const primary = 'https://api.indexnow.org/indexnow'
+const backup = 'https://www.bing.com/indexnow'
 const fakeKey = 'offline-worker-regression-key-1234'
 
 function readSource(path) {
@@ -82,6 +83,7 @@ test('IndexNow uses the real Workers fetch implementation without external netwo
   const config = parsedConfig.config
   t.diagnostic(`Miniflare ${miniflareVersion}; workerd ${workerdVersion}; compatibility date ${config.compatibility_date}`)
   let providerStatus = 200
+  const providerStatuses = new Map()
   const calls = []
   const runtime = new Miniflare({
     modules: true,
@@ -92,11 +94,11 @@ test('IndexNow uses the real Workers fetch implementation without external netwo
     // calls to this site's own routes. There is deliberately no network fallback.
     outboundService: async (request) => {
       calls.push({ url: request.url, method: request.method, body: await request.text() })
-      if (request.url !== primary || request.method !== 'POST') {
+      if (![primary, backup].includes(request.url) || request.method !== 'POST') {
         return new Response('Unexpected outbound request blocked by offline test', { status: 599 })
       }
       return new Response('offline-provider-response', {
-        status: providerStatus,
+        status: providerStatuses.get(request.url) ?? providerStatus,
         headers: providerStatus === 308 ? { Location: 'https://redirected-provider.invalid/' } : {},
       })
     },
@@ -144,15 +146,23 @@ test('IndexNow uses the real Workers fetch implementation without external netwo
     await t.test('manual submission makes no self-request to the public key route', async () => {
       calls.length = 0
       providerStatus = 200
+      providerStatuses.set(primary, 429)
+      providerStatuses.set(backup, 200)
       const response = await runtime.dispatchFetch('http://offline-worker.test/manual', { method: 'POST' })
       const result = await response.json()
       assert.equal(response.status, 200, JSON.stringify(result))
       assert.equal(result.success, true)
       assert.equal(result.data.submitted, 7)
-      assert.equal(calls.length, 1)
-      assert.equal(calls[0].url, primary)
-      assert.equal(calls[0].method, 'POST')
+      assert.equal(result.data.accepted, 7)
+      assert.deepEqual(result.data.providerResults.map(({ provider, state, status }) => ({ provider, state, status })), [
+        { provider: 'IndexNow', state: 'failed', status: 429 },
+        { provider: 'Bing', state: 'accepted', status: 200 },
+      ])
+      assert.equal(calls.length, 2)
+      assert.deepEqual(calls.map((call) => call.url), [primary, backup])
+      assert.ok(calls.every((call) => call.method === 'POST'))
       assert.equal(calls.some((call) => call.url.startsWith(origin)), false)
+      providerStatuses.clear()
     })
   } finally {
     // This shuts down workerd and removes Miniflare's temporary runtime storage.
