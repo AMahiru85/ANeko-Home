@@ -92,7 +92,7 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 
 ### 设置生产密钥
 
-在 Cloudflare 控制台进入 **Workers & Pages → 目标 Worker → Settings → Variables and Secrets**，在生产环境添加加密 Secret：
+在 Cloudflare 控制台进入 **Workers & Pages → 目标 Worker → 设置 → Runtime variables and secrets**，添加加密 Secret：
 
 - `ACCESS_CODE`：管理员访问码。
 - `TURNSTILE_SECRET`：Turnstile 服务端密钥。
