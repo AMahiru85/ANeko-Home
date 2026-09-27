@@ -227,6 +227,8 @@ pnpm exec wrangler tail --config wrangler.jsonc
 
 IndexNow 的 `200` 表示已接收，`202` 表示已接收并等待密钥验证，都不保证最终收录。搜索引擎通过 `keyLocation` 验证公开密钥文件；Worker 不向自身域名发起自检，以免同区域内部请求的路由差异导致误报。错误提示会区分密钥验证失败、提交网址不匹配和搜索引擎限流。每次提交有时间上限，遇到 `Retry-After` 不会立即重复提交。出站请求使用 Workers 支持的 `redirect: 'manual'`；提交接口的重定向会作为明确错误返回，不会转发提交内容。
 
+如果 Worker 出口被限流，可在 GitHub Actions 中手动运行 `Submit IndexNow` 工作流，从 GitHub Runner 提交少量变更 URL。需要在仓库 Actions Secret 中设置同一个 `INDEXNOW_KEY`；工作流只允许提交 `www.aneko.ink` 的 URL，不会自动按每次代码推送提交全站页面。
+
 博客索引和文章元数据位于 KV，正文位于 R2 的 `blog/posts/`，附件位于 `blog/assets/`。迁移时必须同时迁移 KV 和 R2，不能只复制其中一项。
 
 编辑文章时会写入 `blog/posts/<slug>/<版本号>.md`，成功写入后再切换 KV 索引中的 `bodyKey`。旧版的 `blog/posts/<slug>.md` 无需迁移，仍可读取。旧正文版本保留到删除该文章时清理；失败的保存也可能留下未引用的正文，备份或手动清理时以 KV 索引实际引用的 `bodyKey` 为准。索引是发布状态的依据，单独残留的文章元数据键不会使已删除文章重新出现。KV 不是事务数据库，多端同时编辑仍应避免覆盖同一索引。
