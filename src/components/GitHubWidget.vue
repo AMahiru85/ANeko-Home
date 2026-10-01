@@ -220,13 +220,6 @@ import { computed } from 'vue'
 import { useGitHub } from '../composables/useGitHub.js'
 import { userErrorMessage } from '../utils/user-error'
 
-const props = defineProps({
-  username: {
-    type: String,
-    default: 'AMahiru85',
-  },
-})
-
 const {
   username,
   profile,
@@ -238,7 +231,7 @@ const {
   errorMessage,
   failedSections,
   refresh,
-} = useGitHub(props.username)
+} = useGitHub()
 
 const isBusy = computed(() => status.value === 'loading' || status.value === 'refreshing')
 const localizedErrorMessage = computed(() => userErrorMessage(errorMessage.value, 'GitHub 数据暂时无法加载，请稍后重试。'))

@@ -1,7 +1,9 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-const DEFAULT_GITHUB_USERNAME = 'AMahiru85'
-const CACHE_KEY_PREFIX = 'aneko-github-cache-v2:'
+const GITHUB_USERNAME = 'AMahiru85'
+const GITHUB_API = `https://api.github.com/users/${GITHUB_USERNAME}`
+const CONTRIBUTIONS_API = `https://github-contributions-api.jogruber.de/v4/${GITHUB_USERNAME}?y=last`
+const CACHE_KEY = 'aneko-github-cache-v1'
 const CACHE_TTL = 10 * 60 * 1000
 
 function createRequestError(response, service) {
@@ -157,9 +159,9 @@ function normalizeContributions(data) {
   }
 }
 
-function readCache(cacheKey) {
+function readCache() {
   try {
-    const cached = JSON.parse(window.localStorage.getItem(cacheKey) || 'null')
+    const cached = JSON.parse(window.localStorage.getItem(CACHE_KEY) || 'null')
     if (!cached || typeof cached.cachedAt !== 'number' || !cached.data) return null
     return cached
   } catch {
@@ -167,21 +169,15 @@ function readCache(cacheKey) {
   }
 }
 
-function writeCache(cacheKey, data) {
+function writeCache(data) {
   try {
-    window.localStorage.setItem(cacheKey, JSON.stringify({ cachedAt: Date.now(), data }))
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify({ cachedAt: Date.now(), data }))
   } catch {
     // The live data remains usable when storage is unavailable.
   }
 }
 
-export function useGitHub(configuredUsername = DEFAULT_GITHUB_USERNAME) {
-  const GITHUB_USERNAME = /^[A-Za-z0-9-]+$/.test(String(configuredUsername))
-    ? String(configuredUsername)
-    : DEFAULT_GITHUB_USERNAME
-  const GITHUB_API = `https://api.github.com/users/${GITHUB_USERNAME}`
-  const CONTRIBUTIONS_API = `https://github-contributions-api.jogruber.de/v4/${GITHUB_USERNAME}?y=last`
-  const CACHE_KEY = `${CACHE_KEY_PREFIX}${GITHUB_USERNAME.toLowerCase()}`
+export function useGitHub() {
   const profile = ref(null)
   const repos = ref([])
   const events = ref([])
@@ -274,12 +270,12 @@ export function useGitHub(configuredUsername = DEFAULT_GITHUB_USERNAME) {
     status.value = hasData ? (failures.length ? 'partial' : 'ready') : 'error'
     lastUpdated.value = Date.now()
 
-    if (hasData) writeCache(CACHE_KEY, nextData)
+    if (hasData) writeCache(nextData)
     if (controller === requestController) controller = null
   }
 
   onMounted(() => {
-    const cached = readCache(CACHE_KEY)
+    const cached = readCache()
     if (cached) {
       applyData(cached.data)
       lastUpdated.value = cached.cachedAt

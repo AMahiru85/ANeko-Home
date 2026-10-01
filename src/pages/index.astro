@@ -4,18 +4,14 @@ import LeftSidebar from '../components/LeftSidebar.vue'
 import PageContent from '../components/PageContent.vue'
 import PageFooter from '../components/PageFooter.vue'
 import SiteLayout from '../layouts/SiteLayout.astro'
-import { getBindings } from '../utils/cloudflare'
-import { readHomeConfig } from '../utils/site-config'
-
-const homeConfig = await readHomeConfig(getBindings())
 ---
 
 <SiteLayout>
   <main class="at-main">
-    <LeftSidebar homeConfig={homeConfig} />
+    <LeftSidebar />
     <div class="at-right">
-      <HeaderIsland page="home" compact={false} blogSection="articles" homeConfig={homeConfig} client:load />
-      <PageContent homeConfig={homeConfig} client:load />
+      <HeaderIsland page="home" compact={false} blogSection="articles" client:load />
+      <PageContent client:load />
     </div>
   </main>
   <PageFooter client:visible />

@@ -48,7 +48,7 @@ const navLinks = [
   { id: 'articles', label: '文章', href: '/blog/' },
   { id: 'archive', label: '归档', href: '/blog/archive/' },
   { id: 'about', label: '关于', href: '/blog/about/' },
-  { id: 'manage', label: '管理', href: '/admin/' },
+  { id: 'manage', label: '管理', href: '/admin/blog/' },
 ]
 
 defineProps({

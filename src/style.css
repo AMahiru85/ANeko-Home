@@ -369,10 +369,6 @@ body::before {
   overflow-y: scroll;
 }
 
-.timelineText {
-  white-space: pre-line;
-}
-
 #line li {
   list-style: none;
   position: relative;

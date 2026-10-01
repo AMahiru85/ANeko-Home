@@ -80,8 +80,7 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 | `public/static/img/` 和 `public/static/svg/` | 替换主页使用的头像、背景、Logo、图标、二维码和技能图；替换后保持原文件名或修改组件中的路径。 |
 | [src/components/PageHeader.vue](src/components/PageHeader.vue) | 修改页面上的 GitHub 外链，使其指向新的 GitHub 账号。 |
 | [src/pages/blog/about.astro](src/pages/blog/about.astro) | 修改博客介绍页上的 GitHub 外链，使其指向新的 GitHub 账号。 |
-| `/admin/` 管理中心 | 登录后可修改首页 GitHub 账号、欢迎语、身份介绍、位置、标签和时间线；保存后首页会从 KV 读取新配置。 |
-| `src/utils/site-config.ts` | 首页配置的默认值、字段校验和 KV 存储键；需要调整默认首页内容时修改这里。 |
+| [src/composables/useGitHub.js](src/composables/useGitHub.js) | 将 `GITHUB_USERNAME` 改为目标 GitHub 用户名。 |
 | [src/utils/runtime-config.ts](src/utils/runtime-config.ts) | 修改 `SITE_ORIGIN`，填写完整的 HTTPS 源地址，不带路径。 |
 | [src/utils/turnstile-client.ts](src/utils/turnstile-client.ts) | 修改前端 `TURNSTILE_SITE_KEY`。 |
 | [public/robots.txt](public/robots.txt) | 修改 Sitemap 地址。 |
@@ -124,7 +123,6 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 | `PHOTO_MANIFEST_KEY` | 相册清单在 KV 中使用的键名。 | `photos` |
 | `DRIVE_PREFIX` | 云盘文件在 R2 中使用的对象前缀。 | `drive/` |
 | `MAIL_CONFIG_KV_KEY` | 邮箱配置在 KV 中使用的键名。 | `mail:config:v3` |
-| `site:home-config` | `/admin/` 保存的首页内容配置键。 | 使用内置默认值 |
 
 ### 资源绑定
 

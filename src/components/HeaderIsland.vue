@@ -8,7 +8,7 @@
     @open-search="openSearch"
   />
   <WorkspaceHeader
-  v-else-if="page === 'photos' || page === 'drive' || page === 'mail' || page === 'admin'"
+    v-else-if="page === 'photos' || page === 'drive' || page === 'mail'"
     :product="page"
     :theme="theme"
     @toggle-theme="toggleTheme"
@@ -16,7 +16,6 @@
   <PageHeader
     v-else
     :theme="theme"
-    :home-config="homeConfig"
     @open-popup="popupImage = $event"
     @toggle-theme="toggleTheme"
   />
@@ -52,10 +51,6 @@ const props = defineProps({
   blogSection: {
     type: String,
     default: 'articles',
-  },
-  homeConfig: {
-    type: Object,
-    default: () => ({}),
   },
 })
 

@@ -3,8 +3,6 @@ import HeaderIsland from '../components/HeaderIsland.vue'
 import LeftSidebar from '../components/LeftSidebar.vue'
 import PageFooter from '../components/PageFooter.vue'
 import SiteLayout from './SiteLayout.astro'
-import { getBindings } from '../utils/cloudflare'
-import { readHomeConfig } from '../utils/site-config'
 
 interface Props {
   title: string
@@ -26,7 +24,6 @@ const breadcrumbs = {
   mail: { name: '邮箱', path: '/mail/' },
 } as const
 const breadcrumb = breadcrumbs[product]
-const homeConfig = await readHomeConfig(getBindings())
 ---
 
 <SiteLayout
@@ -37,7 +34,7 @@ const homeConfig = await readHomeConfig(getBindings())
   breadcrumb={breadcrumb}
 >
   <main class="at-main blogShell workspaceShell">
-    <LeftSidebar homeConfig={homeConfig} transition:persist="workspace-sidebar" />
+    <LeftSidebar transition:persist="workspace-sidebar" />
     <div class="at-right blogRight workspaceRight">
       <HeaderIsland page={product} compact={false} blogSection="articles" client:load />
       <div class="workspaceRouteContent" transition:name="workspace-content">
