@@ -88,7 +88,6 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 | `wrangler.jsonc` 的 `vars` | 设置你的 `TURNSTILE_HOSTNAMES`，多个主机名用英文逗号分隔。 |
 | [src/composables/useWeather.js](src/composables/useWeather.js) | 修改主页天气数据接口 `WEATHER_API`（可选） |
 | Cloudflare Worker 控制台 → **设置 →Runtime variables and secrets** | 添加加密 Secret `INDEXNOW_KEY`，填写 8–128 位字母、数字或短横线组成的密钥（可在https://www.bing.com/indexnow/getstarted#implementation 生成） |
-| GitHub 仓库 → **Settings → Secrets and variables → Actions** | 如果使用 GitHub Actions 手动提交页面，添加同一个 `INDEXNOW_KEY` Secret；不使用 Actions 时无需配置。 |
 
 ### 设置生产密钥
 
@@ -174,11 +173,11 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 
 ### IndexNow 返回 429
 
-429 表示搜索引擎接口限流。等待响应中的 Retry-After 时间后再试，也可以使用 GitHub Actions 或站外网络提交少量 URL。
+429 表示搜索引擎接口限流。等待响应中的 Retry-After 时间后再试，也可以通过站外网络提交少量 URL。
 
 ## 项目源码
 
-源码仓库：<https://github.com/sherrijmac/ANeko-Home>
+源码仓库：<https://github.com/AMahiru85/ANeko-Home>
 
 ## License
 
