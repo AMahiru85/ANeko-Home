@@ -1,5 +1,5 @@
 <template>
-  <section class="adminApp" aria-label="站点管理后台">
+  <section class="adminDashboard" aria-label="站点管理后台">
     <AdminLoginDialog
       v-if="loginDialogLoaded"
       :open="showLogin"
@@ -7,37 +7,36 @@
       @authenticated="handleAuthenticated"
     />
 
-    <div class="adminLayout">
-      <aside class="adminSidebar" aria-label="后台导航">
-        <nav class="adminNav">
+    <main class="adminMain">
+        <div v-if="activePanel === 'home' || accessCode" class="adminPageHeading">
+          <div>
+            <template v-if="activePanel === 'home'">
+              <p class="adminBreadcrumb">管理后台 <span>/</span> {{ activeItem.label }}</p>
+              <h2 class="adminPageTitle">站点管理</h2>
+              <p class="adminPageDescription">{{ activeItem.description }}</p>
+            </template>
+          </div>
+          <button v-if="accessCode" class="adminLogout" type="button" @click="logout">
+            <LogOut :size="16" aria-hidden="true" /><span>退出登录</span>
+          </button>
+        </div>
+
+        <nav v-if="accessCode" class="adminSections" aria-label="管理功能">
           <button
             v-for="item in panels"
             :key="item.key"
             type="button"
-            class="adminNavItem"
+            class="adminSectionCard"
             :class="{ 'is-active': activePanel === item.key }"
             :aria-current="activePanel === item.key ? 'page' : undefined"
             @click="selectPanel(item.key)"
           >
-            <component :is="item.icon" :size="18" :stroke-width="1.8" aria-hidden="true" />
-            <span>{{ item.label }}</span>
-            <span v-if="item.key === 'home' && isDirty" class="adminUnsavedDot" title="有未保存的更改"></span>
+            <component :is="item.icon" :size="19" :stroke-width="1.8" aria-hidden="true" />
+            <strong>{{ item.label }}</strong>
+            <span>{{ item.description }}</span>
+            <i v-if="item.key === 'home' && isDirty" class="adminUnsavedDot" title="有未保存的更改"></i>
           </button>
         </nav>
-
-        <button v-if="accessCode" class="adminLogout" type="button" @click="logout">
-          <LogOut :size="16" aria-hidden="true" /><span>退出登录</span>
-        </button>
-      </aside>
-
-      <main class="adminMain">
-        <div class="adminPageHeading">
-          <div>
-            <p class="adminBreadcrumb">管理后台 <span>/</span> {{ activeItem.label }}</p>
-            <h2 class="adminPageTitle">{{ activeItem.label }}</h2>
-            <p class="adminPageDescription">{{ activeItem.description }}</p>
-          </div>
-        </div>
 
         <div v-if="notice" class="adminNotice" :class="`is-${noticeKind}`" role="status">
           <CircleCheck v-if="noticeKind === 'success'" :size="17" aria-hidden="true" />
@@ -161,8 +160,7 @@
             <component :is="activeComponent" />
           </section>
         </template>
-      </main>
-    </div>
+    </main>
   </section>
 </template>
 
@@ -647,12 +645,90 @@ onBeforeUnmount(() => {
 }
 .editorSavebar > span.has-unsaved, :global([data-theme="Dark"]) .editorSavebar > span.has-unsaved { color: #ffe09a; }
 .adminModulePanel :deep(.managerToolbar p), .adminModulePanel :deep(.driveToolbar p), .adminModulePanel :deep(.mailToolbar p) { color: rgba(255, 255, 255, .75); }
-@media (max-width: 680px) {
-  .adminSidebar { top: 0; padding: 8px 0; }
-  .adminNav { width: 100%; flex: 1 1 0; overflow-x: auto; scrollbar-width: none; }
-  .adminNav::-webkit-scrollbar { display: none; }
-  .adminNavItem { min-height: 38px; padding: 0 10px; }
-  .adminMain { padding: 0 0 32px; }
-  .adminPageHeading { min-height: 90px; padding: 16px 2px 14px; }
+.adminDashboard { width: min(1080px, 100%); margin: 0 auto; padding: 0 7px 45px; color: var(--main_text_color); }
+.adminDashboardHeader, .adminPageHeading, .adminPanelHeader, .adminListEditor > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.adminDashboardHeader, .adminPageHeading { min-height: 105px; padding: 20px 2px 17px; align-items: flex-end; border-bottom: 1px solid var(--module_dock_border); }
+.adminDashboardHeader h2, .adminPageTitle { margin: 0; color: var(--main_text_color); font-size: clamp(27px, 4vw, 36px); font-weight: 600; }
+.adminEyebrow { margin: 0 0 8px; color: rgba(255,255,255,.68); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.adminIntro, .adminPageDescription { margin: 8px 0 0; color: rgba(255,255,255,.78); font-size: 14px; line-height: 1.6; }
+.adminHeaderActions, .adminPanelActions { display: flex; align-items: center; gap: 9px; }
+.adminDashboard button { min-height: 36px; padding: 0 12px; border: 1px solid var(--module_dock_border); border-radius: 6px; color: var(--main_text_color); background: var(--module_dock_inactive_bg); font: inherit; font-size: 12px; cursor: pointer; transition: background .2s ease, transform .2s ease; }
+.adminDashboard button:hover:not(:disabled) { background: var(--item_hover_color); transform: translateY(-1px); }
+.adminDashboard button:disabled { opacity: .45; cursor: not-allowed; }
+.adminDashboard button.adminPrimary, .adminDashboard button.adminPrimary:hover { border-color: var(--module_dock_active_border); color: var(--module_dock_active_color); background: var(--module_dock_active_bg); }
+.adminLogout { white-space: nowrap; }
+.adminLoginState { color: rgba(255,255,255,.75); font-size: 12px; }
+.adminSections { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 22px 0; }
+.adminSectionCard { position: relative; min-width: 0; min-height: 132px; padding: 13px; border: 1px solid var(--module_dock_border) !important; border-radius: 10px !important; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; color: var(--main_text_color); background: var(--item_bg_color) !important; text-align: left; backdrop-filter: blur(var(--card_filter)); -webkit-backdrop-filter: blur(var(--card_filter)); }
+.adminSectionCard > svg { opacity: .82; }
+.adminSectionCard strong { font-size: 14px; font-weight: 600; }
+.adminSectionCard span { color: rgba(255,255,255,.7); font-size: 11px; line-height: 1.45; }
+.adminSectionCard.is-active { border-color: var(--module_dock_active_border) !important; background: var(--module_dock_hover_bg) !important; box-shadow: inset 0 0 0 1px var(--module_dock_active_border); }
+.adminUnsavedDot { position: absolute; top: 12px; right: 12px; width: 7px; height: 7px; border-radius: 50%; background: #ffcf74; }
+.adminMain { min-width: 0; padding: 0 0 20px; }
+.adminPageHeading { min-height: 0; margin: 0; padding: 0 2px 15px; border: 0; }
+.adminPageHeading > div { flex: 1; }
+.adminPageTitle { font-size: 24px; }
+.adminNotice, .adminLocked, .adminConfig { border: 1px solid var(--module_dock_border); border-radius: 11px; color: var(--main_text_color); background: var(--item_bg_color); backdrop-filter: blur(var(--card_filter)); -webkit-backdrop-filter: blur(var(--card_filter)); }
+.adminNotice { margin: 0 0 16px; padding: 11px 13px; display: flex; align-items: center; gap: 9px; font-size: 13px; }
+.adminNotice.is-error { color: #ffd0d3; }
+.adminNotice.is-success { color: #c9f4da; }
+.adminNotice button { margin-left: auto; border: 0; background: transparent; font-size: 20px !important; }
+.adminLoading { min-height: 110px; display: flex; align-items: center; justify-content: center; gap: 9px; color: rgba(255,255,255,.78); font-size: 13px; }
+.adminSpinner { animation: adminSpin .9s linear infinite; }
+@keyframes adminSpin { to { transform: rotate(360deg); } }
+.adminLocked { margin-top: 22px; padding: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.adminLocked > svg { color: var(--module_dock_active_color); }
+.adminLocked h3 { margin: 0; font-size: 18px; }
+.adminLocked p { max-width: 500px; margin: 0 0 4px; color: rgba(255,255,255,.74); font-size: 13px; line-height: 1.6; }
+.adminConfig { padding: 20px; }
+.adminPanelHeader { min-height: 45px; align-items: center; gap: 14px; }
+.adminPanelHeader .adminEyebrow { margin-bottom: 5px; }
+.adminPanelHeader h3 { margin: 0; font-size: 19px; font-weight: 600; }
+.adminPanelActions > span { color: rgba(255,255,255,.68); font-size: 11px; }
+.adminPanelActions > span.has-unsaved { color: #ffe09a; }
+.adminPanelActions button { min-height: 34px; }
+.adminFormGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-top: 20px; }
+.adminFormGrid label { display: flex; flex-direction: column; gap: 7px; color: var(--main_text_color); font-size: 13px; }
+.adminFormGrid label > span { font-weight: 550; }
+.adminFormGrid small { color: rgba(255,255,255,.68); font-size: 11px; }
+.adminDashboard input, .adminDashboard textarea { width: 100%; min-width: 0; border: 1px solid var(--module_dock_border); border-radius: 6px; outline: none; padding: 9px 10px; color: var(--main_text_color); background: var(--weather_dialog_control_bg); font: inherit; font-size: 13px; user-select: text; }
+.adminDashboard input:focus, .adminDashboard textarea:focus { border-color: var(--module_dock_active_border); box-shadow: 0 0 0 2px var(--module_dock_hover_bg); }
+.adminDashboard input::placeholder, .adminDashboard textarea::placeholder { color: rgba(255,255,255,.55); }
+.adminListEditor { margin-top: 23px; padding-top: 18px; border-top: 1px solid var(--module_dock_border); }
+.adminListEditor > header { align-items: center; }
+.adminListEditor > header h4 { margin: 0; font-size: 15px; }
+.adminListEditor > header .adminEyebrow { margin-bottom: 5px; }
+.adminTagEditor { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 13px; }
+.adminInlineRow { min-width: min(210px, 100%); max-width: 260px; flex: 1 1 170px; display: flex; gap: 6px; }
+.adminInlineRow button, .adminTimelineRow > button { flex: 0 0 auto; }
+.adminEmptyHint { margin: 12px 0 0; color: rgba(255,255,255,.7); font-size: 12px; }
+.adminTimelineEditor { display: grid; gap: 9px; margin-top: 13px; }
+.adminTimelineRow { min-width: 0; padding: 9px; border: 1px solid var(--module_dock_border); border-radius: 8px; display: grid; grid-template-columns: 44px minmax(100px, .27fr) minmax(0, 1fr) auto; align-items: center; gap: 9px; background: var(--module_dock_inactive_bg); }
+.adminTimelineOrder { display: grid; gap: 3px; }
+.adminTimelineOrder button { width: 32px; min-height: 25px; padding: 0; }
+.adminTimelineRow textarea { resize: vertical; line-height: 1.45; }
+.adminModulePanel { min-width: 0; }
+.adminModulePanel :deep(.managerAuthButton), .adminModulePanel :deep(.photoAuthButton), .adminModulePanel :deep(.driveAuthButton), .adminModulePanel :deep(.mailAuthButton) { display: none !important; }
+.adminModulePanel :deep(.managerToolbar), .adminModulePanel :deep(.photoGalleryMeta), .adminModulePanel :deep(.driveToolbar), .adminModulePanel :deep(.mailToolbar) { padding-top: 0; }
+.adminModulePanel :deep(.blogManager), .adminModulePanel :deep(.photoGallery), .adminModulePanel :deep(.drivePage), .adminModulePanel :deep(.mailPage) { width: 100%; margin-inline: 0; }
+@media (max-width: 900px) { .adminSections { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .adminDashboard { padding: 0 0 28px; }
+  .adminDashboardHeader { min-height: 94px; }
+  .adminDashboardHeader h2 { font-size: 28px; }
+  .adminSections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 15px 0; }
+  .adminSectionCard { min-height: 116px; padding: 11px; }
+  .adminSectionCard span { font-size: 10px; }
+  .adminConfig { padding: 15px; }
+  .adminPanelHeader { align-items: flex-start; flex-direction: column; }
+  .adminPanelActions { width: 100%; justify-content: flex-end; }
+  .adminFormGrid { grid-template-columns: 1fr; gap: 12px; }
+  .adminTimelineRow { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .adminTimelineOrder { grid-row: span 2; }
+  .adminTimelineRow > input { grid-column: 2; }
+  .adminTimelineRow > textarea { grid-column: 2; }
+  .adminTimelineRow > button:last-child { grid-column: 3; grid-row: 1; }
+  .adminModulePanel :deep(.managerToolbar), .adminModulePanel :deep(.photoGalleryMeta), .adminModulePanel :deep(.driveToolbar), .adminModulePanel :deep(.mailToolbar) { align-items: flex-start; }
 }
 </style>
