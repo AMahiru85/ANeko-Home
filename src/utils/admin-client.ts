@@ -63,6 +63,7 @@ export function storeAdminAccess(code: string) {
 export function clearAdminAccess() {
   sessionStorage.removeItem(ADMIN_SESSION_KEY)
   sessionStorage.removeItem(LEGACY_SESSION_KEY)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('aneko:admin-session-cleared'))
   void fetch('/api/admin/session', {
     method: 'DELETE',
     keepalive: true,
@@ -76,11 +77,14 @@ export async function restoreAdminAccess() {
 
   if (!code) return ''
 
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), 10000)
   try {
     const result = await apiRequest<{ valid: boolean }>('/api/admin/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code }),
+      signal: controller.signal,
     })
     if (!result.valid) {
       clearAdminAccess()
@@ -91,5 +95,7 @@ export async function restoreAdminAccess() {
   } catch {
     clearAdminAccess()
     return ''
+  } finally {
+    window.clearTimeout(timeoutId)
   }
 }

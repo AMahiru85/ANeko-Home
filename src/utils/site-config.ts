@@ -55,7 +55,7 @@ function cleanList(value: unknown, fallback: string[], maxItems: number, maxLeng
     .map((item) => item.trim().slice(0, maxLength))
     .filter(Boolean)
     .slice(0, maxItems)
-  return result.length ? result : [...fallback]
+  return result
 }
 
 function normalizeTimeline(value: unknown) {
@@ -68,7 +68,7 @@ function normalizeTimeline(value: unknown) {
     }))
     .filter((item) => item.text && item.date)
     .slice(0, 30)
-  return result.length ? result : DEFAULT_HOME_CONFIG.timeline.map((item) => ({ ...item }))
+  return result
 }
 
 export function normalizeHomeConfig(value: unknown): HomeConfig {
