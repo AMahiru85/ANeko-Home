@@ -151,10 +151,19 @@ body {
   width: 100%;
   position: relative;
   font-family: "b", sans-serif;
-  background: var(--main_bg_color) no-repeat fixed top center / cover;
+  background: transparent;
   transition: color 0.1s ease;
   color: var(--main_text_color);
   isolation: isolate;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--main_bg_color) no-repeat top center / cover;
 }
 
 #at-loading {
@@ -1352,10 +1361,6 @@ body {
 }
 
 @media (max-width: 800px) {
-  body {
-    background-attachment: scroll;
-  }
-
   .at-left {
     display: none;
   }
