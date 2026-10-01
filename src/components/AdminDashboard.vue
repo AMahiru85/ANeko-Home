@@ -215,6 +215,13 @@ function logout() {
 
 onMounted(async () => {
   loginDialogLoaded.value = true
+  const loadingScreen = document.getElementById('at-loading')
+  if (loadingScreen) {
+    loadingScreen.style.opacity = '0'
+    window.setTimeout(() => {
+      loadingScreen.style.display = 'none'
+    }, 300)
+  }
   accessCode.value = await restoreAdminAccess()
   authChecking.value = false
   if (accessCode.value) await loadConfig()
