@@ -1,6 +1,6 @@
 # ANeko - Home
 
-ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Workers 构建的个人站点，集成仪表盘、导航、博客、相册、网盘、邮箱和后台管理功能。
+ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Workers 的个人站点，集成仪表盘、导航、博客、相册、网盘、邮箱和后台管理功能。
 
 ## 功能概览
 
