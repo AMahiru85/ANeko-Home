@@ -55,7 +55,7 @@
         v-show="activeModule === 'all' || activeModule === 'github'"
         :aria-busy="!shouldMountGitHub"
       >
-        <GitHubWidget v-if="shouldMountGitHub" />
+        <GitHubWidget v-if="shouldMountGitHub" :username="homeConfig.githubUsername" />
       </div>
 
       <div v-show="activeModule === 'all' || activeModule === 'site'">
@@ -140,6 +140,14 @@ import TimeWidget from './TimeWidget.vue'
 import WeatherWidget from './WeatherWidget.vue'
 
 const GitHubWidget = defineAsyncComponent(() => import('./GitHubWidget.vue'))
+
+const props = defineProps({
+  homeConfig: {
+    type: Object,
+    default: () => ({ githubUsername: 'AMahiru85' }),
+  },
+})
+const homeConfig = props.homeConfig
 
 const moduleTabs = [
   { id: 'all', label: '所有内容' },

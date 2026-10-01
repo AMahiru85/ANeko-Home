@@ -3,6 +3,8 @@ import HeaderIsland from '../components/HeaderIsland.vue'
 import LeftSidebar from '../components/LeftSidebar.vue'
 import PageFooter from '../components/PageFooter.vue'
 import SiteLayout from './SiteLayout.astro'
+import { getBindings } from '../utils/cloudflare'
+import { readHomeConfig } from '../utils/site-config'
 
 interface Props {
   title: string
@@ -31,6 +33,7 @@ const {
   activeSection = 'articles',
   compactHeader = false,
 } = Astro.props
+const homeConfig = await readHomeConfig(getBindings())
 ---
 
 <SiteLayout
@@ -44,7 +47,7 @@ const {
   breadcrumb={{ name: '博客', path: '/blog/' }}
 >
   <main class="at-main blogShell">
-    <LeftSidebar transition:persist="blog-sidebar" />
+    <LeftSidebar homeConfig={homeConfig} transition:persist="blog-sidebar" />
     <div class="at-right blogRight">
       <HeaderIsland
         page="blog"

@@ -16,6 +16,7 @@
   <PageHeader
     v-else
     :theme="theme"
+    :home-config="homeConfig"
     @open-popup="popupImage = $event"
     @toggle-theme="toggleTheme"
   />
@@ -51,6 +52,10 @@ const props = defineProps({
   blogSection: {
     type: String,
     default: 'articles',
+  },
+  homeConfig: {
+    type: Object,
+    default: () => ({}),
   },
 })
 
