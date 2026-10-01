@@ -53,6 +53,11 @@ const products = {
     kicker: 'ANeko / INBOX',
     copy: '连接已有邮箱，收取与发送邮件',
   },
+  admin: {
+    name: 'Admin',
+    kicker: 'ANeko / MANAGEMENT',
+    copy: '站点内容与在线服务管理',
+  },
 }
 
 const currentProduct = computed(() => products[props.product] || products.photos)

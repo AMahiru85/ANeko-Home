@@ -1,20 +1,5 @@
 <template>
   <section class="adminApp" aria-label="站点管理后台">
-    <header class="adminTopbar">
-      <a class="adminBrand" href="/" aria-label="返回 ANeko - Home 首页">
-        <span class="adminBrandMark">A</span>
-        <span class="adminBrandText"><strong>ANeko - Home</strong><small>站点管理后台</small></span>
-      </a>
-
-      <div class="adminTopbarRight">
-        <span class="adminSecureState"><i></i>{{ accessCode ? '管理员已登录' : '安全管理入口' }}</span>
-        <button v-if="accessCode" class="adminLogout" type="button" @click="logout">
-          <LogOut :size="16" aria-hidden="true" />
-          <span>退出登录</span>
-        </button>
-      </div>
-    </header>
-
     <AdminLoginDialog
       v-if="loginDialogLoaded"
       :open="showLogin"
@@ -24,7 +9,6 @@
 
     <div class="adminLayout">
       <aside class="adminSidebar" aria-label="后台导航">
-        <p class="adminNavCaption">工作区</p>
         <nav class="adminNav">
           <button
             v-for="item in panels"
@@ -41,24 +25,16 @@
           </button>
         </nav>
 
-        <div class="adminSidebarBottom">
-          <div class="adminSidebarHint">
-            <ShieldCheck :size="18" aria-hidden="true" />
-            <span><strong>安全管理</strong><small>仅管理员可以修改站点内容</small></span>
-          </div>
-          <a class="adminBackLink" href="/">
-            <span>返回网站</span>
-            <ArrowUpRight :size="15" aria-hidden="true" />
-          </a>
-        </div>
+        <button v-if="accessCode" class="adminLogout" type="button" @click="logout">
+          <LogOut :size="16" aria-hidden="true" /><span>退出登录</span>
+        </button>
       </aside>
 
       <main class="adminMain">
         <div class="adminPageHeading">
           <div>
             <p class="adminBreadcrumb">管理后台 <span>/</span> {{ activeItem.label }}</p>
-            <h1 v-if="activePanel !== 'blog'">{{ activeItem.label }}</h1>
-            <h2 v-else class="adminPageTitle">{{ activeItem.label }}</h2>
+            <h2 class="adminPageTitle">{{ activeItem.label }}</h2>
             <p class="adminPageDescription">{{ activeItem.description }}</p>
           </div>
         </div>
@@ -193,7 +169,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, defineComponent, h, onBeforeUnmount, onMounted, reactive, ref, type Component } from 'vue'
 import {
-  ArrowUpRight,
   CircleAlert,
   CircleCheck,
   Clock3,
@@ -347,11 +322,6 @@ onMounted(async () => {
   handleHashChange()
   window.addEventListener('hashchange', handleHashChange)
   window.addEventListener('aneko:admin-session-cleared', handleSessionCleared)
-  const loadingScreen = document.getElementById('at-loading')
-  if (loadingScreen) {
-    loadingScreen.style.opacity = '0'
-    window.setTimeout(() => { loadingScreen.style.display = 'none' }, 300)
-  }
   accessCode.value = await restoreAdminAccess()
   authChecking.value = false
   if (accessCode.value) await loadConfig()
@@ -429,7 +399,7 @@ onBeforeUnmount(() => {
 .adminPageHeading { min-height: 100px; margin-bottom: 27px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .adminBreadcrumb { margin: 0 0 10px; color: var(--admin-muted); font-size: 12px; }
 .adminBreadcrumb span { margin: 0 5px; opacity: .65; }
-.adminPageHeading h1, .adminPageTitle { margin: 0; color: var(--admin-text); font-size: clamp(25px, 3vw, 32px); font-weight: 680; letter-spacing: -.035em; }
+.adminPageTitle { margin: 0; color: var(--admin-text); font-size: clamp(25px, 3vw, 32px); font-weight: 680; letter-spacing: -.035em; }
 .adminPageDescription { margin: 8px 0 0; color: var(--admin-muted); font-size: 14px; line-height: 1.55; }
 .adminButtonPrimary { border-color: var(--admin-accent); color: #fff; background: #6658d3; }
 :global([data-theme="Dark"]) .adminButtonPrimary { color: #201c3c; background: #b1a5ff; }
@@ -521,7 +491,7 @@ onBeforeUnmount(() => {
   .adminNavItem svg { width: 16px; height: 16px; }
   .adminMain { padding: 24px 15px 34px; }
   .adminPageHeading { min-height: 0; margin-bottom: 20px; gap: 10px; }
-  .adminPageHeading h1 { font-size: 25px; }
+  .adminPageTitle { font-size: 25px; }
   .adminPageDescription { max-width: 450px; font-size: 13px; }
   .adminLoginGate { min-height: 0; padding: 20px; align-items: flex-start; flex-wrap: wrap; gap: 13px; }
   .adminGateIcon { width: 44px; height: 44px; border-radius: 12px; }
@@ -548,4 +518,141 @@ onBeforeUnmount(() => {
   .adminModulePanel :deep(.managerToolbar), .adminModulePanel :deep(.photoGalleryMeta), .adminModulePanel :deep(.driveToolbar), .adminModulePanel :deep(.mailToolbar) { align-items: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* Keep the admin workspace in the same translucent visual language as the site. */
+.adminApp {
+  --admin-surface: var(--item_bg_color);
+  --admin-surface-raised: var(--item_bg_color);
+  --admin-control: var(--weather_dialog_control_bg);
+  --admin-text: var(--main_text_color);
+  --admin-muted: rgba(255, 255, 255, .74);
+  --admin-line: var(--module_dock_border);
+  --admin-accent: var(--module_dock_active_color);
+  --admin-accent-soft: var(--item_hover_color);
+  --admin-danger: #ffb2b8;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  color: var(--main_text_color);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-family: inherit;
+}
+:global([data-theme="Dark"]) .adminApp { border: 0; }
+.adminLayout { min-height: 0; display: block; }
+.adminSidebar {
+  position: relative;
+  top: auto;
+  padding: 10px 0;
+  border: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+}
+.adminNav {
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid var(--module_dock_border);
+  border-radius: 15px;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 5px;
+  background: var(--module_dock_bg);
+  box-shadow: 0 10px 24px -18px var(--module_dock_shadow), inset 0 1px 0 rgba(255, 255, 255, .08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+.adminNavItem {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  gap: 8px;
+  color: var(--module_dock_inactive_color);
+  background: var(--module_dock_inactive_bg);
+  font-size: 13px;
+  transition: color .25s ease, background-color .25s ease, border-color .25s ease, transform .25s ease;
+}
+.adminNavItem:hover { color: var(--main_text_color); border-color: var(--module_dock_border); background: var(--module_dock_hover_bg); transform: translateY(-1px); }
+.adminNavItem.is-active { color: var(--module_dock_active_color); border-color: var(--module_dock_active_border); background: var(--module_dock_active_bg); font-weight: 600; }
+.adminLogout {
+  min-height: 38px;
+  border-color: var(--module_dock_border);
+  color: var(--main_text_color);
+  background: var(--item_bg_color);
+  font-size: 12px;
+}
+.adminLogout:hover { background: var(--item_hover_color); }
+.adminMain { min-width: 0; padding: 0 7px 45px; }
+.adminPageHeading {
+  min-height: 105px;
+  margin: 0 0 20px;
+  padding: 20px 2px 17px;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--module_dock_border);
+}
+.adminBreadcrumb { color: rgba(255, 255, 255, .72); }
+.adminPageTitle { color: var(--main_text_color); font-size: clamp(25px, 4vw, 34px); font-weight: 600; letter-spacing: 0; }
+.adminPageDescription { color: rgba(255, 255, 255, .78); }
+.adminButton, .adminNotice, .adminLoginGate, .editorCard, .timelineEditorRow {
+  border-color: var(--module_dock_border);
+  color: var(--main_text_color);
+  background: var(--item_bg_color);
+  backdrop-filter: blur(var(--card_filter));
+  -webkit-backdrop-filter: blur(var(--card_filter));
+}
+.adminButton { min-height: 36px; border-radius: 6px; font-size: 12px; }
+.adminButtonPrimary, :global([data-theme="Dark"]) .adminButtonPrimary {
+  border-color: var(--module_dock_active_border);
+  color: var(--module_dock_active_color);
+  background: var(--module_dock_active_bg);
+}
+.adminButtonSecondary { color: var(--main_text_color); background: var(--module_dock_inactive_bg); }
+.adminButtonSecondary:hover { background: var(--item_hover_color); }
+.adminNotice { color: var(--main_text_color); }
+.adminAuthLoading, .editorLoading, .adminModuleLoading { color: rgba(255, 255, 255, .8); }
+.editorLoading { background: var(--item_bg_color); backdrop-filter: blur(15px); }
+.adminLoginGate { min-height: 180px; border-radius: 13px; }
+.editorCard { border-radius: 13px; padding: 21px 22px 23px; }
+.editorSectionIcon { border-radius: 10px; color: var(--module_dock_active_color); background: var(--module_dock_active_bg); }
+.editorCardHeader h2, .editorSubheader h3 { color: var(--main_text_color); }
+.editorCardHeader p, .editorSubheader p, .editorField small { color: rgba(255, 255, 255, .72); }
+.editorField, .editorField > span { color: var(--main_text_color); }
+.editorField input, .editorField textarea, .editorInputPrefix {
+  border-color: var(--module_dock_border);
+  color: var(--main_text_color);
+  background: var(--weather_dialog_control_bg);
+}
+.editorField input::placeholder, .editorField textarea::placeholder { color: rgba(255, 255, 255, .58); }
+.editorField input:focus, .editorField textarea:focus, .editorInputPrefix:focus-within { border-color: var(--module_dock_active_border); box-shadow: 0 0 0 3px var(--module_dock_hover_bg); }
+.editorInputPrefix input { background: transparent; }
+.tagEditorItem, .timelineEditorRow { border-color: var(--module_dock_border); background: var(--module_dock_inactive_bg); }
+.tagEditorItem input, .tagEditorItem button, .timelineOrder button, .timelineDelete { color: var(--main_text_color); }
+.editorEmptyHint { color: rgba(255, 255, 255, .72); }
+.timelineDate > span, .timelineText > span, .timelineOrder > span { color: rgba(255, 255, 255, .65); }
+.editorSavebar {
+  border-color: var(--module_dock_border);
+  color: var(--main_text_color);
+  background: var(--module_dock_bg);
+  box-shadow: 0 10px 24px -18px var(--module_dock_shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+.editorSavebar > span.has-unsaved, :global([data-theme="Dark"]) .editorSavebar > span.has-unsaved { color: #ffe09a; }
+.adminModulePanel :deep(.managerToolbar p), .adminModulePanel :deep(.driveToolbar p), .adminModulePanel :deep(.mailToolbar p) { color: rgba(255, 255, 255, .75); }
+@media (max-width: 680px) {
+  .adminSidebar { top: 0; padding: 8px 0; }
+  .adminNav { width: 100%; flex: 1 1 0; overflow-x: auto; scrollbar-width: none; }
+  .adminNav::-webkit-scrollbar { display: none; }
+  .adminNavItem { min-height: 38px; padding: 0 10px; }
+  .adminMain { padding: 0 0 32px; }
+  .adminPageHeading { min-height: 90px; padding: 16px 2px 14px; }
+}
 </style>

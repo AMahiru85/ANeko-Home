@@ -1,16 +1,30 @@
 ---
 import AdminDashboard from '../../components/AdminDashboard.vue'
+import HeaderIsland from '../../components/HeaderIsland.vue'
+import LeftSidebar from '../../components/LeftSidebar.vue'
+import PageFooter from '../../components/PageFooter.vue'
 import SiteLayout from '../../layouts/SiteLayout.astro'
+import { getBindings } from '../../utils/cloudflare'
+import { readHomeConfig } from '../../utils/site-config'
 
 export const prerender = false
+const homeConfig = await readHomeConfig(getBindings())
 ---
 
 <SiteLayout
   title="ANeko - Home | 管理中心"
   description="ANeko - Home 站点管理中心。"
   noindex
+  loadingMode="app-entry"
 >
-  <main class="adminPage">
-    <AdminDashboard client:load />
+  <main class="at-main blogShell workspaceShell">
+    <LeftSidebar homeConfig={homeConfig} transition:persist="workspace-sidebar" />
+    <div class="at-right blogRight workspaceRight">
+      <HeaderIsland page="admin" client:load />
+      <div class="workspaceRouteContent adminRouteContent">
+        <AdminDashboard client:load />
+      </div>
+    </div>
   </main>
+  <PageFooter client:visible />
 </SiteLayout>
