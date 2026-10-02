@@ -38,8 +38,17 @@
           <Settings v-else :size="15" :stroke-width="1.8" aria-hidden="true" />
           <span>{{ showSettings ? '返回邮箱' : '设置' }}</span>
         </button>
+        <a
+          v-if="props.publicPreview"
+          class="mailAuthLink"
+          href="/admin?tab=mail"
+          title="进入后台邮箱管理"
+        >
+          <LogIn :size="15" :stroke-width="1.8" aria-hidden="true" />
+          <span>后台登录</span>
+        </a>
         <button
-          v-if="!props.adminMode"
+          v-else-if="!props.adminMode"
           type="button"
           class="mailAuthButton"
           :class="{ 'is-authenticated': isAuthenticated }"
@@ -151,6 +160,7 @@
         <div v-if="!isAuthenticated" class="mailPanelState is-locked">
           <LockKeyhole :size="25" :stroke-width="1.5" aria-hidden="true" />
           <span>邮件列表已锁定</span>
+          <a v-if="props.publicPreview" class="mailLockedLink" href="/admin?tab=mail">登录后查看邮件</a>
         </div>
         <div v-else-if="messagesStatus === 'loading'" class="mailMessageLoading">
           <span v-for="index in 8" :key="index"></span>
@@ -276,7 +286,7 @@
       </article>
     </div>
 
-    <AdminLoginDialog v-if="!props.adminMode && loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
+    <AdminLoginDialog v-if="!props.adminMode && !props.publicPreview && loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
 
     <Teleport v-if="isMounted && isAuthenticated" to="body">
       <Transition name="mail-modal">
@@ -361,7 +371,7 @@ import { userErrorMessage } from '../utils/user-error'
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
 const MailSettingsPanel = defineAsyncComponent(() => import('./MailSettingsPanel.vue'))
 
-const props = defineProps<{ publicAddress?: string; adminMode?: boolean }>()
+const props = defineProps<{ publicAddress?: string; adminMode?: boolean; publicPreview?: boolean }>()
 
 interface MailProtocolConfig {
   host: string
@@ -454,7 +464,7 @@ const mailFullDateFormatter = new Intl.DateTimeFormat('zh-CN', {
 })
 
 const accessCode = ref('')
-const authChecking = ref(true)
+const authChecking = ref(!props.publicPreview)
 const showLogin = ref(false)
 const loginDialogLoaded = ref(false)
 const isMounted = ref(false)
@@ -502,7 +512,7 @@ const previewFolders: MailFolder[] = [
   { name: 'Trash' },
 ]
 
-const isAuthenticated = computed(() => Boolean(accessCode.value))
+const isAuthenticated = computed(() => !props.publicPreview && Boolean(accessCode.value))
 const visibleFolders = computed(() => isAuthenticated.value ? folders.value : previewFolders)
 const activeFolder = computed(() => visibleFolders.value.find((folder) => folder.name === selectedFolder.value))
 const activeFolderLabel = computed(() => activeFolder.value ? folderLabel(activeFolder.value) : '邮件')
@@ -840,6 +850,10 @@ function openLogin() {
 
 function requireAdminAccess() {
   if (isAuthenticated.value) return true
+  if (props.publicPreview) {
+    window.location.assign('/admin?tab=mail')
+    return false
+  }
   openLogin()
   return false
 }
@@ -1115,7 +1129,7 @@ watch(
 
 onMounted(async () => {
   isMounted.value = true
-  accessCode.value = await restoreAdminAccess()
+  accessCode.value = props.publicPreview ? '' : await restoreAdminAccess()
   authChecking.value = false
   if (accessCode.value) await loadConfig()
 })
@@ -1159,6 +1173,7 @@ onBeforeUnmount(() => {
 .mailCommands { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
 
 .mailCommands button,
+.mailCommands .mailAuthLink,
 .mailState button,
 .mailPanelState button,
 .mailPagination button,
@@ -1180,11 +1195,13 @@ onBeforeUnmount(() => {
 }
 
 .mailCommands button:hover,
+.mailCommands .mailAuthLink:hover,
 .mailState button:hover,
 .mailPanelState button:hover,
 .mailPagination button:hover,
 .mailComposer footer button:hover { border-color: var(--module_dock_active_border); background: var(--item_hover_color); }
 .mailCommands button:active,
+.mailCommands .mailAuthLink:active,
 .mailState button:active,
 .mailPanelState button:active,
 .mailPagination button:active,
@@ -1195,6 +1212,8 @@ onBeforeUnmount(() => {
 .mailComposer footer button.is-primary { border-color: var(--weather_dialog_active_bg); color: var(--weather_dialog_active_text); background: var(--weather_dialog_active_bg); }
 .mailCommands button.is-active,
 .mailAuthButton.is-authenticated { border-color: rgba(90, 160, 118, 0.48); }
+.mailCommands .mailAuthLink { color: inherit; text-decoration: none; }
+.mailLockedLink { color: inherit; font-size: 9px; text-decoration: underline; text-underline-offset: 3px; opacity: .72; }
 
 .mailNotice {
   min-height: 42px;
@@ -1431,7 +1450,9 @@ onBeforeUnmount(() => {
   .mailCommands { width: 100%; justify-content: flex-start; }
   .mailCommands .mailAuthButton { margin-left: auto; }
   .mailCommands button { width: 36px; padding: 0; }
-  .mailCommands button span { display: none; }
+  .mailCommands button span,
+  .mailCommands .mailAuthLink span { display: none; }
+  .mailCommands .mailAuthLink { width: 36px; padding: 0; }
   .mailLoading { grid-template-columns: 1fr; }
   .mailLoading span { min-height: 78px; }
   .mailWorkspace { height: max(600px, calc(100dvh - 194px)); }
