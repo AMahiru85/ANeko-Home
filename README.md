@@ -68,24 +68,27 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 
 ### 配置
 
-部署需要修改以下配置：
+部署完成后，站点内容和功能管理优先通过 `/admin` 完成。登录后台后，可以在同一个控制台切换首页内容、博客、相册、云盘和邮箱；首页内容会保存到 `ANEKO_KV`，不需要再直接修改多个 Vue 组件。
 
-| 配置位置 | 修改内容 |
+| 配置入口 | 修改内容 |
 | --- | --- |
+| `/admin` → 首页内容 | 修改欢迎语、显示名称、第一行、第二行、站点描述、GitHub 账号、所在地、学校 / 组织、标签、时间线、站内项目和外部链接。 |
+| `/admin` → 博客 | 发布、编辑、删除文章，管理文章标签、附件和 Markdown 内容。 |
+| `/admin` → 相册 | 上传、排序和删除相册图片。 |
+| `/admin` → 云盘 | 创建文件夹、上传文件、移动或删除云盘内容。 |
+| `/admin` → 邮箱 | 配置邮箱连接、收发邮件、管理文件夹和 Webhook。 |
 | [src/layouts/SiteLayout.astro](src/layouts/SiteLayout.astro) | 修改站点默认标题、首页描述、关键词、作者和社交分享图片等 SEO 信息。 |
-| [src/components/PageHeader.vue](src/components/PageHeader.vue) | 修改主页欢迎语、个人简介、社交图标链接及抖音、哔哩哔哩、QQ 等二维码图片路径。 |
-| [src/components/LeftSidebar.vue](src/components/LeftSidebar.vue) | 修改主页侧栏的位置、标签和时间线内容。 |
-| [src/components/PageContent.vue](src/components/PageContent.vue) | 修改主页的模块标题、站内功能入口、外部链接和技能图；模块标题在 `moduleTabs`，站内项目在 `siteProjects`，外部链接在 `externalLinks`。 |
+| [src/components/PageHeader.vue](src/components/PageHeader.vue)、[src/components/LeftSidebar.vue](src/components/LeftSidebar.vue)、[src/components/PageContent.vue](src/components/PageContent.vue) | 修改主页布局或开发者级默认值；正常内容编辑请使用 `/admin`。 |
 | [src/components/PageFooter.vue](src/components/PageFooter.vue) | 修改页脚版权文字；年份会根据当前日期自动更新。 |
 | `public/static/img/` 和 `public/static/svg/` | 替换主页使用的头像、背景、Logo、图标、二维码和技能图；替换后保持原文件名或修改组件中的路径。 |
-| [src/components/PageHeader.vue](src/components/PageHeader.vue) | 修改页面上的 GitHub 外链，使其指向新的 GitHub 账号。 |
 | [src/pages/blog/about.astro](src/pages/blog/about.astro) | 修改博客介绍页上的 GitHub 外链，使其指向新的 GitHub 账号。 |
-| [src/composables/useGitHub.js](src/composables/useGitHub.js) | 将 `GITHUB_USERNAME` 改为目标 GitHub 用户名。 |
+| [src/composables/useGitHub.js](src/composables/useGitHub.js) | 修改 GitHub 卡片的请求和展示逻辑；GitHub 账号请使用 `/admin` → 首页内容设置。 |
 | [src/utils/runtime-config.ts](src/utils/runtime-config.ts) | 修改 `SITE_ORIGIN`，填写完整的 HTTPS 源地址，不带路径。 |
 | [src/utils/turnstile-client.ts](src/utils/turnstile-client.ts) | 修改前端 `TURNSTILE_SITE_KEY`。 |
 | [public/robots.txt](public/robots.txt) | 修改 Sitemap 地址。 |
 | Cloudflare Turnstile 控制台 | 添加实际访问的域名。 |
-| `wrangler.jsonc` 的 `vars` | 设置你的 `TURNSTILE_HOSTNAMES`，多个主机名用英文逗号分隔。 |
+| [wrangler.jsonc](wrangler.jsonc) | 配置 `ANEKO_KV`、`ANEKO_R2` 资源绑定，并启用 Worker 日志、调用日志和持久化追踪。 |
+| `wrangler.jsonc` 的 `vars` | 设置 `TURNSTILE_HOSTNAMES`，多个主机名用英文逗号分隔。 |
 | [src/composables/useWeather.js](src/composables/useWeather.js) | 修改主页天气数据接口 `WEATHER_API`（可选） |
 | Cloudflare Worker 控制台 → **设置 →Runtime variables and secrets** | 添加加密 Secret `INDEXNOW_KEY`，填写 8–128 位字母、数字或短横线组成的密钥（可在https://www.bing.com/indexnow/getstarted#implementation 生成） |
 
