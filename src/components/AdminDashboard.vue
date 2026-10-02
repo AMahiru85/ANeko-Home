@@ -27,9 +27,7 @@
 
     <div v-if="authChecking" class="adminGate" role="status">正在检查管理员会话…</div>
     <div v-else-if="!accessCode" class="adminGate">
-      <h3>管理员登录</h3>
-      <p>登录后可以管理站点内容、博客、相册、云盘和邮箱。</p>
-      <button type="button" @click="openLogin">登录管理后台</button>
+      <button type="button" @click="openLogin">管理员登录</button>
     </div>
 
     <section v-else-if="activeTab === 'site'" class="siteEditor" aria-labelledby="site-editor-title">
