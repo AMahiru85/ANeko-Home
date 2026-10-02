@@ -58,9 +58,9 @@
           <div class="siteEditorGrid">
             <label>欢迎语<input v-model="draft.profile.greeting" maxlength="80" required /></label>
             <label>显示名称<input v-model="draft.profile.displayName" maxlength="80" required /></label>
-            <label>身份 / 职位<input v-model="draft.profile.role" maxlength="160" /></label>
+            <label>第一行<input v-model="draft.profile.role" maxlength="160" /></label>
             <label>GitHub 账号<input v-model="draft.github.username" maxlength="39" autocomplete="off" required /></label>
-            <label class="is-wide">介绍语<textarea v-model="draft.profile.introduction" rows="3" maxlength="500"></textarea></label>
+            <label class="is-wide">第二行<textarea v-model="draft.profile.introduction" rows="3" maxlength="500"></textarea></label>
             <label class="is-wide">站点描述<textarea v-model="draft.profile.description" rows="3" maxlength="300"></textarea></label>
             <label>所在地<input v-model="draft.profile.location" maxlength="120" /></label>
             <label>学校 / 组织<input v-model="draft.profile.education" maxlength="120" /></label>
