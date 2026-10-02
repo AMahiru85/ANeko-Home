@@ -3,6 +3,13 @@
   "name": "aneko-home",
   "compatibility_date": "2026-07-17",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true,
+      "persist": true
+    }
+  },
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist"
