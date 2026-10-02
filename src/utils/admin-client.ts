@@ -5,6 +5,7 @@ export interface ApiEnvelope<T> {
 }
 
 export const ADMIN_SESSION_KEY = 'aneko-admin-access'
+export const ADMIN_ACCESS_CLEARED_EVENT = 'aneko-admin-access-cleared'
 const LEGACY_SESSION_KEY = 'aneko-drive-access'
 
 export class ApiRequestError extends Error {
@@ -40,6 +41,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
   }
 
   if (!response.ok || !payload.success || payload.data === undefined) {
+    if (response.status === 401) clearAdminAccess()
     throw new ApiRequestError(payload.error || requestErrorMessage(response.status), response.status)
   }
 
@@ -63,6 +65,9 @@ export function storeAdminAccess(code: string) {
 export function clearAdminAccess() {
   sessionStorage.removeItem(ADMIN_SESSION_KEY)
   sessionStorage.removeItem(LEGACY_SESSION_KEY)
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(ADMIN_ACCESS_CLEARED_EVENT))
+  }
   void fetch('/api/admin/session', {
     method: 'DELETE',
     keepalive: true,

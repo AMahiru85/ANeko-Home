@@ -10,7 +10,7 @@ export const DEFAULT_TURNSTILE_HOSTNAME = new URL(SITE_ORIGIN).hostname
 export const DEFAULT_MAIL_CONFIG_KV_KEY = 'mail:config:v3'
 
 export function canonicalPathname(pathname: string) {
-  if (pathname === '/' || pathname.endsWith('/') || pathname.startsWith('/api/')) return pathname
+  if (pathname === '/' || pathname === '/admin' || pathname.endsWith('/') || pathname.startsWith('/api/')) return pathname
   const finalSegment = pathname.slice(pathname.lastIndexOf('/') + 1)
   return finalSegment.includes('.') ? pathname : `${pathname}/`
 }

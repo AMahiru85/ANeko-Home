@@ -15,11 +15,11 @@
 
       <div class="driveCommands">
         <input ref="fileInput" class="driveFileInput" type="file" multiple @change="handleFileInput" />
-        <button type="button" :disabled="!isAuthenticated || isUploading" title="上传文件" @click="openFilePicker">
+        <button v-if="props.managementEnabled && isAuthenticated" type="button" :disabled="isUploading" title="上传文件" @click="openFilePicker">
           <Upload :size="15" :stroke-width="1.8" aria-hidden="true" />
           <span>上传</span>
         </button>
-        <button type="button" :disabled="!isAuthenticated" title="新建文件夹" @click="openFolderDialog">
+        <button v-if="props.managementEnabled && isAuthenticated" type="button" title="新建文件夹" @click="openFolderDialog">
           <FolderPlus :size="15" :stroke-width="1.8" aria-hidden="true" />
           <span>新建文件夹</span>
         </button>
@@ -32,6 +32,7 @@
           <span>刷新</span>
         </button>
         <button
+          v-if="props.managementEnabled && !props.adminMode"
           type="button"
           class="driveAuthButton"
           :class="{ 'is-authenticated': isAuthenticated }"
@@ -78,7 +79,7 @@
     <div v-else-if="files.length === 0" class="driveState">
       <HardDrive :size="30" :stroke-width="1.5" aria-hidden="true" />
       <h3>这个目录是空的</h3>
-      <p>{{ isAuthenticated ? '可以上传文件或创建文件夹。' : '管理员登录后可以写入文件。' }}</p>
+      <p>{{ isAuthenticated ? '可以上传文件或创建文件夹。' : props.managementEnabled ? '管理员登录后可以写入文件。' : '当前目录没有公开文件。' }}</p>
     </div>
 
     <div v-else class="driveTableWrap">
@@ -113,7 +114,7 @@
                 <button v-if="!file.isFolder" type="button" title="下载" aria-label="下载文件" @click="downloadFile(file)">
                   <Download :size="15" :stroke-width="1.8" aria-hidden="true" />
                 </button>
-                <button v-if="isAuthenticated" class="is-danger" type="button" title="删除" aria-label="删除文件" @click="deleteEntry(file)">
+                <button v-if="props.managementEnabled && isAuthenticated" class="is-danger" type="button" title="删除" aria-label="删除文件" @click="deleteEntry(file)">
                   <Trash2 :size="15" :stroke-width="1.8" aria-hidden="true" />
                 </button>
               </div>
@@ -123,13 +124,13 @@
       </table>
     </div>
 
-    <div v-if="isDragging" class="driveDropOverlay" aria-hidden="true">
+    <div v-if="props.managementEnabled && isDragging" class="driveDropOverlay" aria-hidden="true">
       <Upload :size="28" :stroke-width="1.5" />
       <span>{{ isAuthenticated ? '释放以上传文件' : '请先登录管理员' }}</span>
     </div>
 
     <AdminLoginDialog
-      v-if="authDialogLoaded"
+      v-if="props.managementEnabled && !props.adminMode && authDialogLoaded"
       :open="showAuthDialog"
       @close="closeAuthDialog"
       @authenticated="handleAuthenticated"
@@ -290,6 +291,9 @@ import { apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin
 import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
+const props = withDefaults(defineProps<{ adminMode?: boolean; managementEnabled?: boolean }>(), {
+  managementEnabled: true,
+})
 
 interface DriveFile {
   key: string
@@ -544,6 +548,7 @@ function handleFileInput(event: Event) {
 }
 
 function handleDragEnter() {
+  if (!props.managementEnabled) return
   dragDepth.value += 1
   isDragging.value = true
 }
@@ -556,6 +561,7 @@ function handleDragLeave() {
 function handleDrop(event: DragEvent) {
   dragDepth.value = 0
   isDragging.value = false
+  if (!props.managementEnabled) return
   if (!isAuthenticated.value) {
     openAuthDialog()
     return
@@ -777,7 +783,7 @@ function closePreview() {
 onMounted(async () => {
   isMounted.value = true
   loadFiles()
-  const savedCode = await restoreAdminAccess()
+  const savedCode = props.managementEnabled ? await restoreAdminAccess() : ''
   if (!savedCode) return
   accessCode.value = savedCode
   isAuthenticated.value = true

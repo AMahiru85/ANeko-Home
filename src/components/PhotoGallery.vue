@@ -16,7 +16,7 @@
         <span>{{ String(flatImages.length).padStart(2, '0') }} 张照片</span>
         <input ref="uploadInput" class="photoFileInput" type="file" accept="image/*" multiple @change="handleUploadInput" />
         <button
-          v-if="isAuthenticated"
+          v-if="props.managementEnabled && isAuthenticated"
           class="photoCommandButton"
           type="button"
           title="上传照片"
@@ -30,6 +30,7 @@
           <RefreshCw :size="16" :stroke-width="1.8" aria-hidden="true" />
         </button>
         <button
+          v-if="props.managementEnabled && !props.adminMode"
           class="photoCommandButton photoAuthButton"
           :class="{ 'is-authenticated': isAuthenticated }"
           type="button"
@@ -63,9 +64,9 @@
     <div v-else-if="status === 'empty'" class="workspaceState">
       <Images :size="30" :stroke-width="1.5" aria-hidden="true" />
       <h3>暂时没有照片</h3>
-      <p>{{ isAuthenticated ? '可以直接上传照片。' : '管理员登录后可以上传照片。' }}</p>
+      <p>{{ isAuthenticated ? '可以直接上传照片。' : props.managementEnabled ? '管理员登录后可以上传照片。' : '相册暂时没有照片。' }}</p>
       <button v-if="isAuthenticated" type="button" @click="uploadInput?.click()">上传照片</button>
-      <button v-else type="button" @click="showLogin = true">管理员登录</button>
+      <button v-else-if="props.managementEnabled && !props.adminMode" type="button" @click="showLogin = true">管理员登录</button>
     </div>
 
     <div v-else ref="masonryRoot" class="photoMasonry" aria-label="照片列表">
@@ -98,7 +99,7 @@
             ></span>
           </span>
         </button>
-        <div v-if="isAuthenticated" class="photoAdminActions" role="toolbar" :aria-label="`管理 ${photo.title || `第 ${index + 1} 张照片`}`">
+        <div v-if="props.managementEnabled && isAuthenticated" class="photoAdminActions" role="toolbar" :aria-label="`管理 ${photo.title || `第 ${index + 1} 张照片`}`">
           <button type="button" title="前移" aria-label="前移" :disabled="photo.sourceIndex === 0 || operationBusy" @click="movePhoto(photo.sourceIndex, -1)">
             <ArrowLeft :size="15" :stroke-width="1.9" aria-hidden="true" />
           </button>
@@ -115,7 +116,7 @@
       </article>
     </div>
 
-    <div v-if="isDragging" class="photoDropOverlay" aria-hidden="true">
+    <div v-if="props.managementEnabled && isDragging" class="photoDropOverlay" aria-hidden="true">
       <Upload :size="28" :stroke-width="1.5" />
       <span>{{ isAuthenticated ? '释放以上传照片' : '请先登录管理员' }}</span>
     </div>
@@ -135,7 +136,7 @@
       ></div>
     </div>
 
-    <AdminLoginDialog v-if="loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
+    <AdminLoginDialog v-if="props.managementEnabled && !props.adminMode && loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
 
     <Teleport v-if="isMounted" to="body">
       <Transition name="photo-modal">
@@ -244,6 +245,9 @@ import { apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin
 import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
+const props = withDefaults(defineProps<{ adminMode?: boolean; managementEnabled?: boolean }>(), {
+  managementEnabled: true,
+})
 
 interface RawPhoto {
   title?: string
@@ -278,7 +282,7 @@ const loadedPhotos = ref(new Set<string>())
 const activeImageIndex = ref(-1)
 const toastMessage = ref('')
 const accessCode = ref('')
-const isAuthenticated = computed(() => Boolean(accessCode.value))
+const isAuthenticated = computed(() => props.managementEnabled !== false && Boolean(accessCode.value))
 const showLogin = ref(false)
 const loginDialogLoaded = ref(false)
 const uploadInput = ref<HTMLInputElement | null>(null)
@@ -585,6 +589,7 @@ function handleUploadInput(event: Event) {
 }
 
 function handleDragEnter() {
+  if (!props.managementEnabled) return
   dragDepth.value += 1
   isDragging.value = true
 }
@@ -597,6 +602,7 @@ function handleDragLeave() {
 function handleDrop(event: DragEvent) {
   dragDepth.value = 0
   isDragging.value = false
+  if (!props.managementEnabled) return
   if (!isAuthenticated.value) {
     showLogin.value = true
     return
@@ -793,7 +799,7 @@ onMounted(async () => {
   window.addEventListener('scroll', schedulePageBar, { passive: true })
   window.addEventListener('resize', schedulePageBar)
   schedulePageBar()
-  accessCode.value = await restoreAdminAccess()
+  accessCode.value = props.managementEnabled ? await restoreAdminAccess() : ''
   window.addEventListener('keydown', handleKeydown)
 })
 

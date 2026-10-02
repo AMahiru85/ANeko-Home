@@ -4,14 +4,40 @@ import LeftSidebar from '../components/LeftSidebar.vue'
 import PageContent from '../components/PageContent.vue'
 import PageFooter from '../components/PageFooter.vue'
 import SiteLayout from '../layouts/SiteLayout.astro'
+import { getBindings } from '../utils/cloudflare'
+import { readSiteContent } from '../utils/site-content'
+
+export const prerender = false
+
+const siteContent = await readSiteContent(getBindings())
 ---
 
-<SiteLayout>
+<SiteLayout description={siteContent.profile.description}>
   <main class="at-main">
-    <LeftSidebar />
+    <LeftSidebar
+      location={siteContent.profile.location}
+      education={siteContent.profile.education}
+      tags={siteContent.profile.tags}
+      timeline={siteContent.timeline.filter((item) => item.enabled)}
+    />
     <div class="at-right">
-      <HeaderIsland page="home" compact={false} blogSection="articles" client:load />
-      <PageContent client:load />
+      <HeaderIsland
+        page="home"
+        compact={false}
+        blogSection="articles"
+        github-username={siteContent.github.username}
+        greeting={siteContent.profile.greeting}
+        display-name={siteContent.profile.displayName}
+        occupation={siteContent.profile.role}
+        introduction={siteContent.profile.introduction}
+        client:load
+      />
+      <PageContent
+        github-username={siteContent.github.username}
+        projects={siteContent.projects}
+        external-links={siteContent.externalLinks}
+        client:load
+      />
     </div>
   </main>
   <PageFooter client:visible />

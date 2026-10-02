@@ -39,6 +39,7 @@
           <span>{{ showSettings ? '返回邮箱' : '设置' }}</span>
         </button>
         <button
+          v-if="!props.adminMode"
           type="button"
           class="mailAuthButton"
           :class="{ 'is-authenticated': isAuthenticated }"
@@ -275,7 +276,7 @@
       </article>
     </div>
 
-    <AdminLoginDialog v-if="loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
+    <AdminLoginDialog v-if="!props.adminMode && loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
 
     <Teleport v-if="isMounted && isAuthenticated" to="body">
       <Transition name="mail-modal">
@@ -360,7 +361,7 @@ import { userErrorMessage } from '../utils/user-error'
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
 const MailSettingsPanel = defineAsyncComponent(() => import('./MailSettingsPanel.vue'))
 
-const props = defineProps<{ publicAddress?: string }>()
+const props = defineProps<{ publicAddress?: string; adminMode?: boolean }>()
 
 interface MailProtocolConfig {
   host: string

@@ -1,9 +1,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-const GITHUB_USERNAME = 'AMahiru85'
-const GITHUB_API = `https://api.github.com/users/${GITHUB_USERNAME}`
-const CONTRIBUTIONS_API = `https://github-contributions-api.jogruber.de/v4/${GITHUB_USERNAME}?y=last`
-const CACHE_KEY = 'aneko-github-cache-v1'
+const DEFAULT_GITHUB_USERNAME = 'AMahiru85'
+const CACHE_KEY_PREFIX = 'aneko-github-cache-v1:'
 const CACHE_TTL = 10 * 60 * 1000
 
 function createRequestError(response, service) {
@@ -27,7 +25,7 @@ async function fetchJson(url, signal, service) {
   return response.json()
 }
 
-function normalizeProfile(data) {
+function normalizeProfile(data, username) {
   if (!data || typeof data.login !== 'string') throw new Error('GitHub 用户数据格式无效')
 
   return {
@@ -40,7 +38,7 @@ function normalizeProfile(data) {
     publicRepos: Number(data.public_repos) || 0,
     followers: Number(data.followers) || 0,
     following: Number(data.following) || 0,
-    url: data.html_url || `https://github.com/${GITHUB_USERNAME}`,
+    url: data.html_url || `https://github.com/${username}`,
   }
 }
 
@@ -159,9 +157,9 @@ function normalizeContributions(data) {
   }
 }
 
-function readCache() {
+function readCache(cacheKey) {
   try {
-    const cached = JSON.parse(window.localStorage.getItem(CACHE_KEY) || 'null')
+    const cached = JSON.parse(window.localStorage.getItem(cacheKey) || 'null')
     if (!cached || typeof cached.cachedAt !== 'number' || !cached.data) return null
     return cached
   } catch {
@@ -169,15 +167,21 @@ function readCache() {
   }
 }
 
-function writeCache(data) {
+function writeCache(cacheKey, data) {
   try {
-    window.localStorage.setItem(CACHE_KEY, JSON.stringify({ cachedAt: Date.now(), data }))
+    window.localStorage.setItem(cacheKey, JSON.stringify({ cachedAt: Date.now(), data }))
   } catch {
     // The live data remains usable when storage is unavailable.
   }
 }
 
-export function useGitHub() {
+export function useGitHub(usernameValue = DEFAULT_GITHUB_USERNAME) {
+  const username = typeof usernameValue === 'string' && usernameValue.trim()
+    ? usernameValue.trim()
+    : DEFAULT_GITHUB_USERNAME
+  const githubApi = `https://api.github.com/users/${encodeURIComponent(username)}`
+  const contributionsApi = `https://github-contributions-api.jogruber.de/v4/${encodeURIComponent(username)}?y=last`
+  const cacheKey = `${CACHE_KEY_PREFIX}${username.toLowerCase()}`
   const profile = ref(null)
   const repos = ref([])
   const events = ref([])
@@ -222,10 +226,10 @@ export function useGitHub() {
     failedSections.value = []
 
     const requests = [
-      ['profile', fetchJson(GITHUB_API, requestController.signal, 'GitHub')],
-      ['repos', fetchJson(`${GITHUB_API}/repos?sort=updated&per_page=6`, requestController.signal, 'GitHub')],
-      ['events', fetchJson(`${GITHUB_API}/events?per_page=10`, requestController.signal, 'GitHub')],
-      ['contributions', fetchJson(CONTRIBUTIONS_API, requestController.signal, '贡献服务')],
+      ['profile', fetchJson(githubApi, requestController.signal, 'GitHub')],
+      ['repos', fetchJson(`${githubApi}/repos?sort=updated&per_page=6`, requestController.signal, 'GitHub')],
+      ['events', fetchJson(`${githubApi}/events?per_page=10`, requestController.signal, 'GitHub')],
+      ['contributions', fetchJson(contributionsApi, requestController.signal, '贡献服务')],
     ]
 
     const results = await Promise.allSettled(requests.map(([, request]) => request))
@@ -244,7 +248,7 @@ export function useGitHub() {
       }
 
       try {
-        if (key === 'profile') nextData.profile = normalizeProfile(result.value)
+        if (key === 'profile') nextData.profile = normalizeProfile(result.value, username)
         if (key === 'repos') nextData.repos = normalizeRepos(result.value)
         if (key === 'events') nextData.events = normalizeEvents(result.value)
         if (key === 'contributions') {
@@ -270,12 +274,12 @@ export function useGitHub() {
     status.value = hasData ? (failures.length ? 'partial' : 'ready') : 'error'
     lastUpdated.value = Date.now()
 
-    if (hasData) writeCache(nextData)
+    if (hasData) writeCache(cacheKey, nextData)
     if (controller === requestController) controller = null
   }
 
   onMounted(() => {
-    const cached = readCache()
+    const cached = readCache(cacheKey)
     if (cached) {
       applyData(cached.data)
       lastUpdated.value = cached.cachedAt
@@ -292,7 +296,7 @@ export function useGitHub() {
   onBeforeUnmount(() => controller?.abort())
 
   return {
-    username: GITHUB_USERNAME,
+    username,
     profile,
     repos,
     events,

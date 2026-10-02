@@ -21,6 +21,7 @@
           <span>{{ indexNowSubmitting ? '正在提交…' : '提交收录' }}</span>
         </button>
         <button
+          v-if="!props.adminMode"
           type="button"
           class="managerAuthButton"
           :class="{ 'is-authenticated': isAuthenticated }"
@@ -48,7 +49,7 @@
       <LockKeyhole :size="30" :stroke-width="1.5" aria-hidden="true" />
       <h3>管理员登录</h3>
       <p>登录后可以发布、编辑和删除文章。</p>
-      <button type="button" @click="showLogin = true">登录</button>
+      <button v-if="!props.adminMode" type="button" @click="showLogin = true">登录</button>
     </div>
 
     <div v-else-if="status === 'error'" class="managerState" role="alert">
@@ -110,7 +111,7 @@
       </table>
     </div>
 
-    <AdminLoginDialog v-if="loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
+    <AdminLoginDialog v-if="!props.adminMode && loginDialogLoaded" :open="showLogin" @close="showLogin = false" @authenticated="handleAuthenticated" />
 
     <Teleport v-if="isMounted" to="body">
       <Transition name="manager-editor">
@@ -270,6 +271,7 @@ import { isValidBlogSlug } from '../utils/blog-config'
 import { userErrorMessage } from '../utils/user-error'
 
 const AdminLoginDialog = defineAsyncComponent(() => import('./AdminLoginDialog.vue'))
+const props = defineProps<{ adminMode?: boolean }>()
 
 interface StoredBlogPost {
   slug: string

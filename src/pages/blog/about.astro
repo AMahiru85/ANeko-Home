@@ -1,6 +1,8 @@
 ---
 import BlogLayout from '../../layouts/BlogLayout.astro'
 import { BlogDataUnavailableError, getPublishedPosts, getTagEntries } from '../../utils/posts'
+import { getBindings } from '../../utils/cloudflare'
+import { readSiteContent } from '../../utils/site-content'
 
 export const prerender = false
 
@@ -15,6 +17,7 @@ try {
 }
 const tags = getTagEntries(posts)
 const firstYear = posts.at(-1)?.data.pubDate.getFullYear()
+const githubUsername = (await readSiteContent(getBindings())).github.username
 ---
 
 <BlogLayout
@@ -31,7 +34,7 @@ const firstYear = posts.at(-1)?.data.pubDate.getFullYear()
         <p class="blogAboutLead">ANeko Blog</p>
         <p>这里收集项目开发中的实践、系统配置笔记，以及那些值得留下一份文字记录的日常</p>
         <div class="blogAboutActions">
-          <a href="https://github.com/AMahiru85" target="_blank" rel="noreferrer">GitHub</a>
+          <a href={`https://github.com/${githubUsername}`} target="_blank" rel="noreferrer">GitHub</a>
           <a href="/" data-astro-reload>返回主页</a>
         </div>
       </div>

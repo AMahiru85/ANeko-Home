@@ -10,13 +10,10 @@
     </div>
 
     <h1 class="welcome">
-      Hello I'm <span class="gradientText">ANeko !</span>
+      {{ greeting }} <span class="gradientText">{{ displayName }} !</span>
     </h1>
-    <div class="description">🙂 <span class="purpleText">Full Stack</span> Developer</div>
-    <div class="description">
-      📝 The only way to do <span class="purpleText textBackground">great</span> is
-      to <span class="purpleText textBackground">love</span> what you do.
-    </div>
+    <div class="description">{{ occupation }}</div>
+    <div class="description">{{ introduction }}</div>
 
     <div class="iconContainer">
       <a class="iconItem" href="/mail/" data-astro-reload>
@@ -25,7 +22,7 @@
         </svg>
         <div class="iconTip">Mail</div>
       </a>
-      <a class="iconItem" href="https://github.com/AMahiru85" target="_blank">
+      <a class="iconItem" :href="`https://github.com/${githubUsername}`" target="_blank" rel="noreferrer">
         <svg class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
           <path d="M512 120c-217.6 0-393.6 176-393.6 393.6 0 173.6 112.8 320.8 269.6 372.8 19.6 3.6 26.8-8.4 26.8-18.8v-66.4c-109.6 23.8-132.8-52.8-132.8-52.8-17.8-45.4-43.6-57.6-43.6-57.6-35.6-24.4 2.8-24 2.8-24 39.6 2.8 60.4 40.8 60.4 40.8 35.2 60.4 92.4 43 115.2 32.8 3.6-25.6 13.8-43 25.2-53-87.2-10-178.8-43.6-178.8-193.6 0-42.8 15.2-77.6 40.4-105.2-4-10-17.6-50.8 4-106 0 0 32.8-10.4 108 40.4 31.2-8.8 64.8-13.2 98.4-13.4 33.6 0.2 67.2 4.6 98.4 13.4 75.2-50.8 108-40.4 108-40.4 21.6 55.2 8 96 4 106 25.2 27.6 40.4 62.4 40.4 105.2 0 150.4-91.6 183.2-178.8 193.6 14 12.2 26.8 36.4 26.8 73.6v108.8c0 10.4 7.2 22.4 27.2 18.4 156.8-52 269.6-199.2 269.6-372.8C905.6 296 729.6 120 512 120z"></path>
         </svg>
@@ -62,7 +59,12 @@ defineProps({
   theme: {
     type: String,
     default: 'Light'
-  }
+  },
+  githubUsername: { type: String, default: 'AMahiru85' },
+  greeting: { type: String, default: "Hello I'm" },
+  displayName: { type: String, default: 'ANeko' },
+  occupation: { type: String, default: '🙂 Full Stack Developer' },
+  introduction: { type: String, default: '📝 The only way to do great is to love what you do.' },
 })
 
 defineEmits(['openPopup', 'toggleTheme'])

@@ -8,7 +8,7 @@
     @open-search="openSearch"
   />
   <WorkspaceHeader
-    v-else-if="page === 'photos' || page === 'drive' || page === 'mail'"
+  v-else-if="page === 'photos' || page === 'drive' || page === 'mail' || page === 'admin'"
     :product="page"
     :theme="theme"
     @toggle-theme="toggleTheme"
@@ -16,6 +16,11 @@
   <PageHeader
     v-else
     :theme="theme"
+    :github-username="props.githubUsername"
+    :greeting="props.greeting"
+    :display-name="props.displayName"
+    :occupation="props.occupation"
+    :introduction="props.introduction"
     @open-popup="popupImage = $event"
     @toggle-theme="toggleTheme"
   />
@@ -27,7 +32,7 @@
   <BlogSearch v-if="page === 'blog' && searchLoaded" :open="searchOpen" @close="closeSearch" />
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import BlogHeader from './BlogHeader.vue'
 import PageHeader from './PageHeader.vue'
@@ -39,19 +44,24 @@ const BlogSearch = defineAsyncComponent(() => import('./BlogSearch.vue'))
 
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({
-  page: {
-    type: String,
-    default: 'home',
-  },
-  compact: {
-    type: Boolean,
-    default: false,
-  },
-  blogSection: {
-    type: String,
-    default: 'articles',
-  },
+const props = withDefaults(defineProps<{
+  page?: string
+  compact?: boolean
+  blogSection?: string
+  githubUsername?: string
+  greeting?: string
+  displayName?: string
+  occupation?: string
+  introduction?: string
+}>(), {
+  page: 'home',
+  compact: false,
+  blogSection: 'articles',
+  githubUsername: 'AMahiru85',
+  greeting: "Hello I'm",
+  displayName: 'ANeko',
+  occupation: '🙂 Full Stack Developer',
+  introduction: '📝 The only way to do great is to love what you do.',
 })
 
 const theme = ref('Light')

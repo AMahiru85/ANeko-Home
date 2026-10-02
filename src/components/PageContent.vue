@@ -55,7 +55,7 @@
         v-show="activeModule === 'all' || activeModule === 'github'"
         :aria-busy="!shouldMountGitHub"
       >
-        <GitHubWidget v-if="shouldMountGitHub" />
+        <GitHubWidget v-if="shouldMountGitHub" :username="githubUsername" />
       </div>
 
       <div v-show="activeModule === 'all' || activeModule === 'site'">
@@ -133,11 +133,45 @@
 
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ExternalLink, Link2 } from '@lucide/vue'
 import TimeWidget from './TimeWidget.vue'
 import WeatherWidget from './WeatherWidget.vue'
+
+interface SiteProject {
+  id: string
+  name: string
+  url: string
+  img: string
+  external: boolean
+}
+
+interface SiteExternalLink {
+  id: string
+  name: string
+  meta: string
+  url: string
+}
+
+const props = withDefaults(defineProps<{
+  githubUsername?: string
+  projects?: SiteProject[]
+  externalLinks?: SiteExternalLink[]
+}>(), {
+  githubUsername: 'AMahiru85',
+  projects: () => [
+      { id: 'blog', name: '博客', url: '/blog/', img: '/static/svg/blog.svg', external: false },
+      { id: 'cloud', name: '云盘', url: '/drive/', img: '/static/svg/cloud.svg', external: false },
+      { id: 'mail', name: '邮箱', url: '/mail/', img: '/static/svg/mail.svg', external: false },
+      { id: 'photo', name: '相册', url: '/photos/', img: '/static/svg/photo.svg', external: false },
+  ],
+  externalLinks: () => [
+      { id: 'ai', name: '中转', meta: 'ai.aneko.ink', url: 'https://ai.aneko.ink' },
+      { id: 'probe', name: '探针', meta: 'tz.aneko.ink', url: 'https://tz.aneko.ink' },
+      { id: 'edt', name: 'edt', meta: 'dl.aneko.ink', url: 'https://dl.aneko.ink/login' },
+  ],
+})
 
 const GitHubWidget = defineAsyncComponent(() => import('./GitHubWidget.vue'))
 
@@ -260,18 +294,9 @@ function handleTabKeydown(event, currentIndex) {
   event.currentTarget.closest('[role="tablist"]')?.querySelectorAll('[role="tab"]')[targetIndex]?.focus()
 }
 
-const siteProjects = [
-  { id: 'blog', name: '博客', url: '/blog/', img: '/static/svg/blog.svg', external: false },
-  { id: 'cloud', name: '云盘', url: '/drive/', img: '/static/svg/cloud.svg', external: false },
-  { id: 'mail', name: '邮箱', url: '/mail/', img: '/static/svg/mail.svg', external: false },
-  { id: 'photo', name: '相册', url: '/photos/', img: '/static/svg/photo.svg', external: false },
-]
-
-const externalLinks = [
-  { name: '中转', meta: 'ai.aneko.ink', url: 'https://ai.aneko.ink' },
-  { name: '探针', meta: 'tz.aneko.ink', url: 'https://tz.aneko.ink' },
-  { name: 'edt', meta: 'dl.aneko.ink', url: 'https://dl.aneko.ink/login' },
-]
+const siteProjects = props.projects
+const externalLinks = props.externalLinks
+const githubUsername = props.githubUsername
 </script>
 
 <style scoped>

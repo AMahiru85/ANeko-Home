@@ -7,8 +7,9 @@ import SiteLayout from './SiteLayout.astro'
 interface Props {
   title: string
   description: string
-  product: 'photos' | 'drive' | 'mail'
+  product: 'photos' | 'drive' | 'mail' | 'admin'
   keywords?: string
+  noindex?: boolean
 }
 
 const {
@@ -16,12 +17,14 @@ const {
   description,
   product,
   keywords = 'ANeko,相册,云盘,Cloudflare,R2,KV',
+  noindex = false,
 } = Astro.props
 
 const breadcrumbs = {
   photos: { name: '相册', path: '/photos/' },
   drive: { name: '云盘', path: '/drive/' },
   mail: { name: '邮箱', path: '/mail/' },
+  admin: { name: '管理后台', path: '/admin' },
 } as const
 const breadcrumb = breadcrumbs[product]
 ---
@@ -30,6 +33,7 @@ const breadcrumb = breadcrumbs[product]
   title={title}
   description={description}
   keywords={keywords}
+  noindex={noindex}
   loadingMode="app-entry"
   breadcrumb={breadcrumb}
 >
