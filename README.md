@@ -1,18 +1,20 @@
 # ANeko - Home
 
-ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Workers 的个人站点，集成仪表盘、导航、博客、相册、网盘、邮箱和后台管理功能。
+ANeko - Home 是基于 Astro、Vue 和 Cloudflare Workers 的个人站点，集成博客、相册、网盘、邮箱和后台管理功能。首页参考 [小枫_QWQ 个人主页](https://xiaofeng-qwq.github.io/) 的内容结构，以顶部品牌栏和底部分类栏切换身份、工作区、项目及技术栈。
 
 ## 功能概览
 
 | 页面 | 说明 |
 | --- | --- |
-| 首页 `/` | 显示时间、天气、GitHub 公开信息、站内功能入口和外部链接。 |
+| 首页 `/` | 身份介绍与交互终端；工作区的搜索、时间、天气、待办、专注计时及站点入口；GitHub 项目动态；技术栈。 |
 | 博客 `/blog/` | 支持文章列表、文章详情、标签、归档、分页和 RSS。文章正文使用 Markdown，可以关联附件。 |
 | 相册 `/photos/` | 展示公开图片，支持查看大图和下载。 |
 | 云盘 `/drive/` | 提供目录浏览、文件预览、下载和下载测速。 |
 | 邮箱 `/mail/` | 通过已配置的 IMAP/SMTP 邮箱收取、阅读和发送邮件并管理邮箱设置。 |
 
 ## 技术组成
+
+首页沿用原有 `PageContent.vue` 分类栏，只保留一套分类导航。四个视图拆分在 `src/components/home/`，支持 `/#/workspace`、`/#/projects`、`/#/stack` 直接访问与浏览器前进、后退。首次打开某个视图才加载对应组件；待办保存在当前浏览器，专注计时在本次主页访问期间运行。身份页终端可输入 `help`、`about`、`workspace`、`projects`、`stack`、`timeline`、`blog`、`clear`。
 
 - **Astro 7、Vue 3、TypeScript**：页面、服务端路由和交互组件。
 - **Cloudflare Workers**：SSR 页面和 API。
@@ -78,7 +80,7 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 | `/admin` → 云盘 | 创建文件夹、上传文件、移动或删除云盘内容。 |
 | `/admin` → 邮箱 | 配置邮箱连接、收发邮件、管理文件夹和 Webhook。 |
 | [src/layouts/SiteLayout.astro](src/layouts/SiteLayout.astro) | 修改站点默认标题、首页描述、关键词、作者和社交分享图片等 SEO 信息。 |
-| [src/components/PageHeader.vue](src/components/PageHeader.vue)、[src/components/LeftSidebar.vue](src/components/LeftSidebar.vue)、[src/components/PageContent.vue](src/components/PageContent.vue) | 修改主页布局或开发者级默认值；正常内容编辑请使用 `/admin`。 |
+| [src/components/PageContent.vue](src/components/PageContent.vue)、`src/components/home/`、[src/styles/home.css](src/styles/home.css) | 修改首页分类切换、四个内容视图与首页主题；正常内容编辑请使用 `/admin`。 |
 | [src/components/PageFooter.vue](src/components/PageFooter.vue) | 修改页脚版权文字；年份会根据当前日期自动更新。 |
 | `public/static/img/` 和 `public/static/svg/` | 替换主页使用的头像、背景、Logo、图标、二维码和技能图；替换后保持原文件名或修改组件中的路径。 |
 | [src/pages/blog/about.astro](src/pages/blog/about.astro) | 修改博客介绍页上的 GitHub 外链，使其指向新的 GitHub 账号。 |

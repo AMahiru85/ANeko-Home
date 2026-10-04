@@ -1,0 +1,43 @@
+/* Scope the minimal home theme so service pages retain their layout. */
+html[data-site-shell="home"] {
+  color-scheme: light;
+  --home-bg: #f7f8fa;
+  --home-text: #272b32;
+  --home-muted: #767d87;
+  --home-border: #e1e4e9;
+  --home-surface: rgba(255, 255, 255, 0.68);
+  --home-soft: #edf0f4;
+  --home-accent: #5279ba;
+  --home-grid: rgba(90, 106, 127, 0.035);
+  --main_text_color: var(--home-text);
+  --item_bg_color: var(--home-surface);
+  --item_hover_color: var(--home-soft);
+  --fill: var(--home-text);
+  --module_dock_border: var(--home-border);
+  --module_dock_active_border: var(--home-border);
+}
+html[data-site-shell="home"][data-theme="Dark"] {
+  color-scheme: dark;
+  --home-bg: #101113;
+  --home-text: #e9eaed;
+  --home-muted: #8d919a;
+  --home-border: #282b30;
+  --home-surface: rgba(22, 24, 28, 0.72);
+  --home-soft: #21242a;
+  --home-accent: #8eaee0;
+  --home-grid: rgba(184, 194, 211, 0.035);
+}
+html[data-site-shell="home"] body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: var(--home-bg);
+  color: var(--home-text);
+}
+html[data-site-shell="home"] body::before {
+  background-image: linear-gradient(var(--home-grid) 1px, transparent 1px), linear-gradient(90deg, var(--home-grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center top;
+}
+html[data-site-shell="home"] :is(button, input) { font: inherit; }
+html[data-site-shell="home"] button { -webkit-tap-highlight-color: transparent; }
+html[data-site-shell="home"] :is(a, button, input):focus-visible { outline: 2px solid var(--home-accent); outline-offset: 4px; }
+html[data-site-shell="home"] :is(input, p, h1, h2, h3, pre, time) { user-select: text; }
