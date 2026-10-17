@@ -102,6 +102,11 @@ onMounted(() => {
   if (!loading) return
 
   const hideLoading = () => {
+    loading.classList.add('is-complete')
+    const progress = document.getElementById('at-loading-progress')
+    const progressFill = document.getElementById('at-loading-progress-fill')
+    progress?.setAttribute('aria-valuenow', '100')
+    progressFill?.style.setProperty('--loading-progress', '100%')
     loading.style.opacity = '0'
     window.setTimeout(() => {
       loading.style.display = 'none'
