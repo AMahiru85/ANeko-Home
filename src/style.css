@@ -268,30 +268,17 @@ body::before {
 
 #at-loading-progress-fill {
   display: block;
-  width: var(--loading-progress, 18%);
+  width: var(--loading-progress, 0%);
   height: 100%;
   border-radius: inherit;
   background: #472eff;
   transform-origin: left center;
   transition: width 0.45s ease;
-  animation: loadingProgress 1.8s ease-in-out infinite;
 }
 
 #at-loading.is-complete #at-loading-progress-fill {
   width: var(--loading-progress, 100%);
   animation: none;
-}
-
-@keyframes loadingProgress {
-  0% {
-    width: 18%;
-  }
-  60% {
-    width: 72%;
-  }
-  100% {
-    width: 88%;
-  }
 }
 
 @keyframes zoom {
