@@ -229,7 +229,7 @@ async function saveContent() {
 }
 
 function addTimelineItem() {
-  draft.value.timeline.push({ id: crypto.randomUUID(), date: '', content: '', enabled: true })
+  draft.value.timeline.unshift({ id: crypto.randomUUID(), date: '', content: '', enabled: true })
 }
 
 function removeTimelineItem(index: number) { draft.value.timeline.splice(index, 1) }
