@@ -87,6 +87,9 @@ a:focus-visible {
   --weather_aqi_sensitive_bg: rgba(196, 108, 55, 0.16);
   --weather_aqi_poor_text: #8b3038;
   --weather_aqi_poor_bg: rgba(190, 68, 78, 0.15);
+  --loading_bg: #e7edf4;
+  --loading_accent: #5d7694;
+  --loading_track: rgba(93, 118, 148, 0.22);
 }
 
 /* ====== Dark 主题 ====== */
@@ -143,6 +146,9 @@ a:focus-visible {
   --weather_aqi_sensitive_bg: rgba(196, 108, 55, 0.18);
   --weather_aqi_poor_text: #ffd0d3;
   --weather_aqi_poor_bg: rgba(190, 68, 78, 0.18);
+  --loading_bg: #20242c;
+  --loading_accent: #7f92aa;
+  --loading_track: rgba(127, 146, 170, 0.24);
 }
 
 body {
@@ -167,7 +173,7 @@ body::before {
 }
 
 #at-loading {
-  background: radial-gradient(white, #d8eaff);
+  background: var(--loading_bg);
   background-size: 100%;
   background-position: center;
   height: 100%;
@@ -254,7 +260,7 @@ body::before {
   width: 150px;
   position: relative;
   border-radius: 50%;
-  background: #472eff;
+  background: var(--loading_accent);
   animation: zoom 1s linear infinite;
 }
 
@@ -263,7 +269,7 @@ body::before {
   height: 4px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(71, 46, 255, 0.16);
+  background: var(--loading_track);
 }
 
 #at-loading-progress-fill {
@@ -271,7 +277,7 @@ body::before {
   width: var(--loading-progress, 0%);
   height: 100%;
   border-radius: inherit;
-  background: #472eff;
+  background: var(--loading_accent);
   transform-origin: left center;
   transition: width 0.45s ease;
 }
