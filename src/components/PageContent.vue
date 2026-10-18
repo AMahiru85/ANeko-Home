@@ -11,9 +11,10 @@
     :aria-labelledby="`${activeModule}-tab`"
   >
   <div class="moduleSwitcherLayout">
-  <nav class="moduleDock" role="tablist" aria-label="内容模块" :aria-orientation="isMobileDock ? 'horizontal' : 'vertical'">
-    <div class="moduleDockSurface">
-      <div v-for="(tab, index) in moduleTabs" :key="tab.id" class="moduleDockItem">
+  <div class="moduleDock">
+    <nav class="moduleDockTabs" role="tablist" aria-label="内容模块" :aria-orientation="isMobileDock ? 'horizontal' : 'vertical'">
+      <div class="moduleDockSurface">
+        <div v-for="(tab, index) in moduleTabs" :key="tab.id" class="moduleDockItem">
         <button
           :id="`${tab.id}-tab`"
           class="moduleDockButton"
@@ -39,14 +40,51 @@
           <svg v-else-if="tab.id === 'site'" class="moduleDockIcon" viewBox="0 0 24 24" aria-hidden="true">
             <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path>
           </svg>
-          <svg v-else class="moduleDockIcon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10 13a5 5 0 0 0 7.07.07l2-2A5 5 0 0 0 12 4l-1.15 1.15"></path>
-            <path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"></path>
-          </svg>
         </button>
+        </div>
+        <div ref="externalFolderRef" class="moduleDockItem externalLinksFolderDock">
+          <button
+            ref="externalFolderButtonRef"
+            class="moduleDockButton moduleFolderButton"
+            type="button"
+            aria-label="外部链接"
+            aria-haspopup="menu"
+            :aria-expanded="externalLinksOpen"
+            @click="toggleExternalLinks"
+            @keydown.esc="closeExternalLinks"
+          >
+            <Folder class="moduleDockIcon" :size="17" :stroke-width="2" aria-hidden="true" />
+            <span class="moduleFolderDots" aria-hidden="true"><i></i><i></i><i></i></span>
+          </button>
+          <div v-if="externalLinksOpen" class="externalLinksFolder" role="menu" aria-label="外部链接" @keydown.esc="closeExternalLinks">
+            <div class="externalLinksFolderHeader">
+              <strong>外部链接</strong>
+              <button type="button" aria-label="关闭外部链接" @click="closeExternalLinks">
+                <X :size="14" :stroke-width="2" aria-hidden="true" />
+              </button>
+            </div>
+            <div class="externalLinkGrid">
+              <a
+                v-for="link in externalLinks"
+                :key="link.id"
+                class="externalLinkButton"
+                :href="link.url"
+                target="_blank"
+                rel="noreferrer"
+                role="menuitem"
+              >
+                <span class="externalLinkCopy">
+                  <strong>{{ link.name }}</strong>
+                  <small>{{ link.meta }}</small>
+                </span>
+                <ExternalLink class="externalLinkArrow" :size="15" :stroke-width="1.7" aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </nav>
+    </nav>
+  </div>
 
   <div ref="modulePanelRef" class="moduleContent">
       <div
@@ -90,28 +128,6 @@
         </div>
       </div>
 
-      <div v-show="activeModule === 'all' || activeModule === 'links'" class="externalLinksSection">
-        <div class="title">
-          <Link2 class="icon externalLinksTitleIcon" :size="26" :stroke-width="1.8" aria-hidden="true" />
-          links
-        </div>
-        <div class="externalLinkGrid">
-          <a
-            v-for="link in externalLinks"
-            :key="link.name"
-            class="externalLinkButton"
-            :href="link.url"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <span class="externalLinkCopy">
-              <strong>{{ link.name }}</strong>
-              <small>{{ link.meta }}</small>
-            </span>
-            <ExternalLink class="externalLinkArrow" :size="15" :stroke-width="1.7" aria-hidden="true" />
-          </a>
-        </div>
-      </div>
   </div>
   </div>
 
@@ -135,7 +151,7 @@
 
 <script setup lang="ts">
 import { defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ExternalLink, Link2 } from '@lucide/vue'
+import { ExternalLink, Folder, X } from '@lucide/vue'
 import TimeWidget from './TimeWidget.vue'
 import WeatherWidget from './WeatherWidget.vue'
 
@@ -179,11 +195,13 @@ const moduleTabs = [
   { id: 'all', label: '所有内容' },
   { id: 'github', label: 'GITHUB 信息' },
   { id: 'site', label: '本站功能' },
-  { id: 'links', label: '外部链接' },
 ]
 const activeModule = ref('all')
 const modulePanelRef = ref(null)
 const isMobileDock = ref(false)
+const externalLinksOpen = ref(false)
+const externalFolderRef = ref(null)
+const externalFolderButtonRef = ref(null)
 const githubMountRef = ref(null)
 const shouldMountGitHub = ref(false)
 let switchAnimation = null
@@ -214,10 +232,25 @@ function mountGitHub() {
   clearGitHubIdle()
 }
 
+function toggleExternalLinks() {
+  externalLinksOpen.value = !externalLinksOpen.value
+}
+
+function closeExternalLinks(restoreFocus = true) {
+  if (!externalLinksOpen.value) return
+  externalLinksOpen.value = false
+  if (restoreFocus) nextTick(() => externalFolderButtonRef.value?.focus())
+}
+
+function handleExternalFolderPointerdown(event) {
+  if (!externalFolderRef.value?.contains(event.target)) closeExternalLinks(false)
+}
+
 onMounted(() => {
   dockMediaQuery = window.matchMedia('(max-width: 800px)')
   syncDockOrientation(dockMediaQuery)
   dockMediaQuery.addEventListener('change', syncDockOrientation)
+  document.addEventListener('pointerdown', handleExternalFolderPointerdown)
 
   if ('IntersectionObserver' in window && githubMountRef.value) {
     githubObserver = new IntersectionObserver(([entry]) => {
@@ -235,6 +268,7 @@ onMounted(() => {
 })
 
 async function selectModule(moduleId) {
+  closeExternalLinks(false)
   if (moduleId === 'all' || moduleId === 'github') mountGitHub()
   if (moduleId === activeModule.value) return
 
@@ -270,6 +304,7 @@ async function selectModule(moduleId) {
 onBeforeUnmount(() => {
   switchAnimation?.cancel()
   dockMediaQuery?.removeEventListener('change', syncDockOrientation)
+  document.removeEventListener('pointerdown', handleExternalFolderPointerdown)
   githubObserver?.disconnect()
   clearGitHubIdle()
 })
