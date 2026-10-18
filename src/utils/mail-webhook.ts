@@ -39,6 +39,10 @@ export async function verifyWebhookAuthorization(
   })
 }
 
+export function webhookQueryInput(request: Request): Record<string, string> {
+  return Object.fromEntries(new URL(request.url).searchParams.entries())
+}
+
 function webhookData(value: unknown): JsonRecord {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new MailServiceInputError('请求内容必须是 JSON 对象')

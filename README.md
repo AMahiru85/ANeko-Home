@@ -92,6 +92,28 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 | [src/composables/useWeather.js](src/composables/useWeather.js) | 修改主页天气数据接口 `WEATHER_API`（可选） |
 | Cloudflare Worker 控制台 → **设置 →Runtime variables and secrets** | 添加加密 Secret `INDEXNOW_KEY`，填写 8–128 位字母、数字或短横线组成的密钥（可在https://www.bing.com/indexnow/getstarted#implementation 生成） |
 
+### 邮箱 Webhook 请求格式
+
+在 `/admin` → 邮箱中启用 Webhook、配置令牌、收件人和邮件模板。默认接口使用 `/api/mail/webhook`；新增接口使用 `/api/mail/webhook/{接口标识}`。两个路径都支持 GET 和 POST。
+
+GET 把令牌和数据放在 URL 查询参数中，适合只能发送简单 GET 请求的调用方：
+
+```text
+GET https://example.com/api/mail/webhook?token=<令牌>&event=order.created&orderId=1001
+GET https://example.com/api/mail/webhook/alerts?token=<令牌>&event=server.down&host=node-1
+```
+
+POST 使用 JSON 对象传数据。令牌可以放在 `Authorization: Bearer <令牌>` 请求头中，也可以放在 JSON 的 `token` 字段：
+
+```bash
+curl -X POST 'https://example.com/api/mail/webhook/alerts' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <令牌>' \
+  -d '{"event":"order.created","order":{"id":1001},"user":{"name":"Aki"}}'
+```
+
+请求字段会用于渲染该接口关联的邮件模板。模板可使用 `{{event}}`、`{{order.id}}` 等字段路径；`{{json}}` 会插入完整请求数据（不包含令牌）。GET 查询参数的值均为文本；需要传嵌套对象时使用 POST。GET 的令牌位于 URL 中，可能被代理或访问日志记录，调用方支持请求头时建议使用 POST。
+
 ### 设置生产密钥
 
 在 Cloudflare 控制台进入 **Workers & Pages → 目标 Worker → 设置 → Runtime variables and secrets**，添加加密 Secret：

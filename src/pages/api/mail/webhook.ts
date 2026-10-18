@@ -8,18 +8,20 @@ import {
 import { getBindings } from '../../../utils/cloudflare'
 import { mailError, mailExceptionResponse, mailSuccess, readMailJson } from '../../../utils/mail-api'
 import { sendMail } from '../../../utils/mail-service'
-import { verifyWebhookAuthorization, webhookMailInput } from '../../../utils/mail-webhook'
+import { verifyWebhookAuthorization, webhookMailInput, webhookQueryInput } from '../../../utils/mail-webhook'
 
 export const prerender = false
 
-export const POST: APIRoute = async ({ request }) => {
+const handleWebhook: APIRoute = async ({ request }) => {
   try {
     const bindings = getBindings()
     const store = await readMailWebhookStore(bindings)
     const resolved = publicMailWebhook(store, 'default')
     if (!resolved) return mailError('未找到 Webhook 配置', 404)
     const webhook = { ...resolved, revision: store.revision, updatedAt: store.updatedAt }
-    const body = await readMailJson(request)
+    const body = request.method === 'GET'
+      ? webhookQueryInput(request)
+      : await readMailJson(request)
     if (!await verifyWebhookAuthorization(request, webhook.token, body)) {
       return mailError('访问令牌无效或缺失', 401, { 'WWW-Authenticate': 'Bearer' })
     }
@@ -34,3 +36,6 @@ export const POST: APIRoute = async ({ request }) => {
     return mailExceptionResponse(error)
   }
 }
+
+export const GET = handleWebhook
+export const POST = handleWebhook
