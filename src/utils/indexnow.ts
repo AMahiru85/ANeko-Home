@@ -26,6 +26,7 @@ export class IndexNowError extends Error {
   readonly code: string
   progress?: IndexNowSubmissionResult
   providerResults?: IndexNowProviderResult[]
+  requestDetails?: IndexNowRequestDetails
 
   constructor(
     kind: IndexNowErrorKind,
@@ -61,6 +62,20 @@ export interface IndexNowProviderResult {
   status?: number
   message?: string
   retryAfter?: string
+  requestDetails?: IndexNowRequestDetails
+}
+
+export interface IndexNowRequestDetails {
+  provider: string
+  url: string
+  method: 'POST'
+  headers: Record<string, string>
+  body: {
+    host: string
+    key: string
+    keyLocation: string
+    urlList: string[]
+  }
 }
 
 export function isValidIndexNowKey(key: string) {
@@ -214,11 +229,26 @@ async function requestIndexNow(endpoint: string, body: string, deadline: number)
           response.status, validRetryAfter(response.headers.get('Retry-After')), provider, 'provider_redirect',
         )
       }
-      throw new IndexNowError(
+      const error = new IndexNowError(
         'upstream',
         `${provider} 返回 HTTP ${response.status}：${indexNowUpstreamHint(response.status)}`,
         response.status, validRetryAfter(response.headers.get('Retry-After')), provider, 'provider_rejected',
       )
+      if (response.status === 429) {
+        const requestBody = JSON.parse(body) as IndexNowRequestDetails['body']
+        error.requestDetails = {
+          provider,
+          url: endpoint,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: {
+            ...requestBody,
+            key: '[已隐藏]',
+            keyLocation: requestBody.keyLocation.replace(requestBody.key, '[已隐藏]'),
+          },
+        }
+      }
+      throw error
     })
   } catch (error) {
     if (error instanceof IndexNowError) throw error
@@ -284,6 +314,7 @@ async function submitIndexNowBatchToAllProviders(key: string, urlList: string[],
           status: providerError.status,
           message: providerError.message,
           retryAfter: providerError.retryAfter,
+          requestDetails: providerError.requestDetails,
         },
         error: providerError,
       }
@@ -307,6 +338,7 @@ async function submitIndexNowBatchToAllProviders(key: string, urlList: string[],
       preferredError?.code ?? 'provider_rejected',
     )
     error.providerResults = providerResults
+    error.requestDetails = preferredError?.requestDetails
     throw error
   }
   return { providerResults, accepted, pending }

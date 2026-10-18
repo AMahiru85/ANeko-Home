@@ -2,6 +2,7 @@ export interface ApiEnvelope<T> {
   success: boolean
   data?: T
   error?: string
+  diagnostic?: unknown
 }
 
 export const ADMIN_SESSION_KEY = 'aneko-admin-access'
@@ -10,11 +11,13 @@ const LEGACY_SESSION_KEY = 'aneko-drive-access'
 
 export class ApiRequestError extends Error {
   status: number
+  diagnostic?: unknown
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, diagnostic?: unknown) {
     super(message)
     this.name = 'ApiRequestError'
     this.status = status
+    this.diagnostic = diagnostic
   }
 }
 
@@ -42,7 +45,7 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
 
   if (!response.ok || !payload.success || payload.data === undefined) {
     if (response.status === 401) clearAdminAccess()
-    throw new ApiRequestError(payload.error || requestErrorMessage(response.status), response.status)
+    throw new ApiRequestError(payload.error || requestErrorMessage(response.status), response.status, payload.diagnostic)
   }
 
   return payload.data

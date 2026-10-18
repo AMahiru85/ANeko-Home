@@ -240,6 +240,51 @@
         </div>
       </Transition>
     </Teleport>
+
+    <Teleport v-if="isMounted" to="body">
+      <Transition name="manager-editor">
+        <div
+          v-if="indexNowRequest"
+          class="editorBackdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="indexnow-request-title"
+          tabindex="-1"
+          @mousedown.self="indexNowRequest = null"
+          @keydown.esc="indexNowRequest = null"
+        >
+          <section class="blogEditor indexNowRequestDialog">
+            <header class="editorHeader">
+              <div>
+                <p>{{ indexNowRequest.provider }} 返回 HTTP 429</p>
+                <h3 id="indexnow-request-title">请求详情</h3>
+              </div>
+              <button type="button" title="关闭" aria-label="关闭" @click="indexNowRequest = null">
+                <X :size="18" :stroke-width="1.8" aria-hidden="true" />
+              </button>
+            </header>
+
+            <div class="editorScroll">
+              <dl class="indexNowRequestMeta">
+                <dt>请求地址</dt><dd>{{ indexNowRequest.url }}</dd>
+                <dt>请求方法</dt><dd>{{ indexNowRequest.method }}</dd>
+                <dt>Content-Type</dt><dd>{{ indexNowRequest.headers['Content-Type'] }}</dd>
+              </dl>
+              <p class="indexNowRequestNote">请求体中的密钥已隐藏。</p>
+              <pre class="indexNowRequestBody">{{ JSON.stringify(indexNowRequest.body, null, 2) }}</pre>
+            </div>
+
+            <footer class="editorFooter">
+              <button type="button" title="复制请求详情" @click="copyIndexNowRequest">
+                <Copy :size="15" :stroke-width="1.8" aria-hidden="true" />
+                <span>{{ indexNowRequestCopied ? '已复制' : '复制请求' }}</span>
+              </button>
+              <button class="is-primary" type="button" @click="indexNowRequest = null">关闭</button>
+            </footer>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </section>
 </template>
 
@@ -266,7 +311,7 @@ import {
   Upload,
   X,
 } from '@lucide/vue'
-import { apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin-client'
+import { ApiRequestError, apiRequest, clearAdminAccess, restoreAdminAccess } from '../utils/admin-client'
 import { isValidBlogSlug } from '../utils/blog-config'
 import { userErrorMessage } from '../utils/user-error'
 
@@ -313,6 +358,26 @@ interface BlogForm {
   body: string
 }
 
+interface IndexNowRequestPreview {
+  provider: string
+  url: string
+  method: 'POST'
+  headers: Record<string, string>
+  body: {
+    host: string
+    key: string
+    keyLocation: string
+    urlList: string[]
+  }
+}
+
+interface IndexNowProviderResult {
+  provider: string
+  state: 'accepted' | 'pending' | 'failed'
+  status?: number
+  requestDetails?: IndexNowRequestPreview
+}
+
 type ManagerStatus = 'loading' | 'ready' | 'error'
 
 const blogManagerDateFormatter = new Intl.DateTimeFormat('zh-CN', {
@@ -336,6 +401,8 @@ const editorLoading = ref(false)
 const editorSaving = ref(false)
 const editorClosing = ref(false)
 const indexNowSubmitting = ref(false)
+const indexNowRequest = ref<IndexNowRequestPreview | null>(null)
+const indexNowRequestCopied = ref(false)
 const editorError = ref('')
 const originalSlug = ref('')
 const assetUploading = ref(false)
@@ -406,7 +473,7 @@ async function submitSiteToIndexNow() {
       submitted: number
       accepted: number
       pending: number
-      providerResults: Array<{ provider: string; state: 'accepted' | 'pending' | 'failed'; status?: number }>
+      providerResults: IndexNowProviderResult[]
     }>('/api/admin/indexnow', {
       method: 'POST',
       headers: authHeaders(),
@@ -419,14 +486,43 @@ async function submitSiteToIndexNow() {
       return `${label}未接收（${status ? `HTTP ${status}` : '网络错误'}）`
     }).join('；')
     const partialFailure = result.providerResults.some(({ state }) => state === 'failed')
+    const limitedProvider = result.providerResults.find(({ status, requestDetails }) => status === 429 && requestDetails)
+    if (limitedProvider?.requestDetails) {
+      indexNowRequest.value = limitedProvider.requestDetails
+      indexNowRequestCopied.value = false
+    }
     const acceptance = result.pending > 0
       ? `已接收 ${result.submitted} 个页面，等待验证 ${result.pending} 个。`
       : `已接收 ${result.submitted} 个公开页面。`
     showNotice(`${partialFailure ? '部分成功。' : ''}${providerStatus}。${acceptance}无需立即重复提交。`, partialFailure ? 'error' : 'success')
   } catch (error) {
+    if (error instanceof ApiRequestError) {
+      const diagnostic = error.diagnostic as { providerResults?: IndexNowProviderResult[] } | undefined
+      const limitedProvider = diagnostic?.providerResults?.find(({ status, requestDetails }) => status === 429 && requestDetails)
+      if (limitedProvider?.requestDetails) {
+        indexNowRequest.value = limitedProvider.requestDetails
+        indexNowRequestCopied.value = false
+      }
+    }
     showNotice(userErrorMessage(error, 'IndexNow 提交失败，请稍后重试。'), 'error')
   } finally {
     indexNowSubmitting.value = false
+  }
+}
+
+async function copyIndexNowRequest() {
+  if (!indexNowRequest.value) return
+  const preview = indexNowRequest.value
+  try {
+    await navigator.clipboard.writeText(JSON.stringify({
+      url: preview.url,
+      method: preview.method,
+      headers: preview.headers,
+      body: preview.body,
+    }, null, 2))
+    indexNowRequestCopied.value = true
+  } catch {
+    showNotice('复制失败，请手动选择请求内容', 'error')
   }
 }
 
@@ -749,8 +845,8 @@ function showNotice(message: string, kind: 'success' | 'error' = 'success') {
   }, 2600)
 }
 
-watch(editorOpen, (open) => {
-  document.documentElement.style.overflow = open ? 'hidden' : ''
+watch([editorOpen, indexNowRequest], ([editorIsOpen, request]) => {
+  document.documentElement.style.overflow = editorIsOpen || Boolean(request) ? 'hidden' : ''
 })
 
 onMounted(async () => {
@@ -940,9 +1036,15 @@ onBeforeUnmount(() => {
   background: var(--weather_dialog_bg);
   box-shadow: 0 24px 70px -34px var(--weather_dialog_shadow), inset 0 1px 0 var(--weather_dialog_inset);
 }
+.indexNowRequestDialog { width: min(620px, 100%); }
 .editorHeader { min-height: 74px; padding: 18px 20px 14px; border-bottom: 1px solid var(--weather_dialog_line); display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .editorHeader h3 { margin: 3px 0 0; font-size: 18px; line-height: 24px; }
 .editorScroll { min-height: 0; padding: 18px 20px 24px; overflow-y: auto; }
+.indexNowRequestMeta { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 9px 14px; font-size: 10px; line-height: 15px; }
+.indexNowRequestMeta dt { color: var(--weather_dialog_muted); }
+.indexNowRequestMeta dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.indexNowRequestNote { margin: 18px 0 7px; color: var(--weather_dialog_muted); font-size: 9px; }
+.indexNowRequestBody { max-height: min(48dvh, 420px); margin: 0; padding: 13px; overflow: auto; border: 1px solid var(--weather_dialog_line); border-radius: 6px; color: inherit; background: var(--weather_dialog_surface); white-space: pre; font: 10px/16px "Cascadia Code", Consolas, monospace; }
 .editorLoading { min-height: 420px; padding: 20px; }
 .editorLoading span { height: 100%; min-height: 380px; display: block; background: linear-gradient(100deg, transparent 20%, var(--weather_dialog_surface) 45%, transparent 70%); background-size: 220% 100%; animation: managerShimmer 1.35s ease-in-out infinite; }
 .editorError { margin: 0 0 14px; padding: 10px 12px; border: 1px solid rgba(193, 78, 78, 0.25); border-radius: 6px; color: #b14646; background: rgba(193, 78, 78, 0.06); font-size: 10px; }
