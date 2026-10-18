@@ -42,13 +42,13 @@
           </svg>
         </button>
         </div>
-        <div ref="externalFolderRef" class="moduleDockItem externalLinksFolderDock">
+        <div class="moduleDockItem externalLinksFolderDock">
           <button
             ref="externalFolderButtonRef"
             class="moduleDockButton moduleFolderButton"
             type="button"
             aria-label="外部链接"
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
             :aria-expanded="externalLinksOpen"
             @click="toggleExternalLinks"
             @keydown.esc="closeExternalLinks"
@@ -56,31 +56,6 @@
             <Folder class="moduleDockIcon" :size="17" :stroke-width="2" aria-hidden="true" />
             <span class="moduleFolderDots" aria-hidden="true"><i></i><i></i><i></i></span>
           </button>
-          <div v-if="externalLinksOpen" class="externalLinksFolder" role="menu" aria-label="外部链接" @keydown.esc="closeExternalLinks">
-            <div class="externalLinksFolderHeader">
-              <strong>外部链接</strong>
-              <button type="button" aria-label="关闭外部链接" @click="closeExternalLinks">
-                <X :size="14" :stroke-width="2" aria-hidden="true" />
-              </button>
-            </div>
-            <div class="externalLinkGrid">
-              <a
-                v-for="link in externalLinks"
-                :key="link.id"
-                class="externalLinkButton"
-                :href="link.url"
-                target="_blank"
-                rel="noreferrer"
-                role="menuitem"
-              >
-                <span class="externalLinkCopy">
-                  <strong>{{ link.name }}</strong>
-                  <small>{{ link.meta }}</small>
-                </span>
-                <ExternalLink class="externalLinkArrow" :size="15" :stroke-width="1.7" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
         </div>
       </div>
     </nav>
@@ -147,6 +122,51 @@
       </div>
   </section>
 
+  <Teleport v-if="isClientReady" to="body">
+    <Transition name="external-links-dialog">
+      <div v-if="externalLinksOpen" class="externalLinksDialogBackdrop" @click.self="closeExternalLinks">
+        <section
+          ref="externalDialogRef"
+          class="externalLinksDialogPanel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="external-links-dialog-title"
+          tabindex="-1"
+          @keydown="handleExternalDialogKeydown"
+        >
+          <header class="externalLinksDialogHeader">
+            <div class="externalLinksDialogTitle">
+              <p>快捷入口</p>
+              <h2 id="external-links-dialog-title">外部链接</h2>
+            </div>
+            <button type="button" title="关闭外部链接" aria-label="关闭外部链接" @click="closeExternalLinks">
+              <X :size="17" :stroke-width="2" aria-hidden="true" />
+            </button>
+          </header>
+
+          <div class="externalLinksDialogBody">
+            <div class="externalLinkGrid">
+              <a
+                v-for="link in externalLinks"
+                :key="link.id"
+                class="externalLinkButton"
+                :href="link.url"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span class="externalLinkCopy">
+                  <strong>{{ link.name }}</strong>
+                  <small>{{ link.meta }}</small>
+                </span>
+                <ExternalLink class="externalLinkArrow" :size="15" :stroke-width="1.7" aria-hidden="true" />
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </Transition>
+  </Teleport>
+
 </template>
 
 <script setup lang="ts">
@@ -200,8 +220,9 @@ const activeModule = ref('all')
 const modulePanelRef = ref(null)
 const isMobileDock = ref(false)
 const externalLinksOpen = ref(false)
-const externalFolderRef = ref(null)
 const externalFolderButtonRef = ref(null)
+const isClientReady = ref(false)
+const externalDialogRef = ref(null)
 const githubMountRef = ref(null)
 const shouldMountGitHub = ref(false)
 let switchAnimation = null
@@ -209,6 +230,8 @@ let dockMediaQuery = null
 let githubObserver = null
 let githubIdleHandle = null
 let githubIdleUsesRequestIdleCallback = false
+let returnFocusElement = null
+let previousBodyOverflow = null
 
 function syncDockOrientation(event) {
   isMobileDock.value = event.matches
@@ -232,25 +255,62 @@ function mountGitHub() {
   clearGitHubIdle()
 }
 
-function toggleExternalLinks() {
-  externalLinksOpen.value = !externalLinksOpen.value
+async function toggleExternalLinks() {
+  if (externalLinksOpen.value) {
+    closeExternalLinks()
+    return
+  }
+
+  returnFocusElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  previousBodyOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  externalLinksOpen.value = true
+  await nextTick()
+  externalDialogRef.value?.focus()
 }
 
 function closeExternalLinks(restoreFocus = true) {
   if (!externalLinksOpen.value) return
   externalLinksOpen.value = false
-  if (restoreFocus) nextTick(() => externalFolderButtonRef.value?.focus())
+  if (previousBodyOverflow !== null) document.body.style.overflow = previousBodyOverflow
+  previousBodyOverflow = null
+  const focusTarget = returnFocusElement || externalFolderButtonRef.value
+  returnFocusElement = null
+  if (restoreFocus) nextTick(() => focusTarget?.focus())
 }
 
-function handleExternalFolderPointerdown(event) {
-  if (!externalFolderRef.value?.contains(event.target)) closeExternalLinks(false)
+function handleExternalDialogKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeExternalLinks()
+    return
+  }
+
+  if (event.key !== 'Tab') return
+  const focusable = [...externalDialogRef.value.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')]
+    .filter((element) => element.offsetParent !== null)
+  if (!focusable.length) {
+    event.preventDefault()
+    externalDialogRef.value.focus()
+    return
+  }
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 
 onMounted(() => {
   dockMediaQuery = window.matchMedia('(max-width: 800px)')
   syncDockOrientation(dockMediaQuery)
   dockMediaQuery.addEventListener('change', syncDockOrientation)
-  document.addEventListener('pointerdown', handleExternalFolderPointerdown)
+  isClientReady.value = true
 
   if ('IntersectionObserver' in window && githubMountRef.value) {
     githubObserver = new IntersectionObserver(([entry]) => {
@@ -304,7 +364,7 @@ async function selectModule(moduleId) {
 onBeforeUnmount(() => {
   switchAnimation?.cancel()
   dockMediaQuery?.removeEventListener('change', syncDockOrientation)
-  document.removeEventListener('pointerdown', handleExternalFolderPointerdown)
+  closeExternalLinks(false)
   githubObserver?.disconnect()
   clearGitHubIdle()
 })
@@ -337,5 +397,188 @@ const githubUsername = props.githubUsername
 <style scoped>
 .githubMount {
   min-height: 320px;
+}
+
+.externalLinksDialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--weather_dialog_backdrop);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.externalLinksDialogPanel {
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(620px, calc(100dvh - 32px));
+  border: 1px solid var(--weather_dialog_border);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--weather_dialog_text);
+  background: var(--weather_dialog_bg);
+  box-shadow: 0 24px 70px var(--weather_dialog_shadow), inset 0 1px 0 var(--weather_dialog_inset);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  outline: none;
+}
+
+.externalLinksDialogHeader {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--weather_dialog_line);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.externalLinksDialogTitle {
+  min-width: 0;
+}
+
+.externalLinksDialogTitle p {
+  margin: 0 0 4px;
+  color: var(--weather_dialog_subtle);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 12px;
+  text-transform: uppercase;
+}
+
+.externalLinksDialogTitle h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 26px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.externalLinksDialogHeader > button {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid var(--weather_dialog_line);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: inherit;
+  background: var(--weather_dialog_control_bg);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.externalLinksDialogHeader > button:hover {
+  background: var(--weather_dialog_control_hover);
+  transform: translateY(-1px);
+}
+
+.externalLinksDialogHeader > button:active {
+  transform: scale(0.96);
+}
+
+.externalLinksDialogHeader > button:focus-visible,
+.externalLinksDialogBody .externalLinkButton:focus-visible {
+  outline: 2px solid var(--weather_dialog_focus);
+  outline-offset: 2px;
+}
+
+.externalLinksDialogBody {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 22px 24px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.externalLinksDialogBody .externalLinkGrid {
+  margin: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.externalLinksDialogBody .externalLinkButton {
+  min-height: 84px;
+  border-color: var(--weather_dialog_line);
+  color: var(--weather_dialog_text);
+  background: var(--weather_dialog_control_bg);
+}
+
+.externalLinksDialogBody .externalLinkButton:hover {
+  border-color: var(--weather_dialog_line_strong);
+  background: var(--weather_dialog_control_hover);
+}
+
+.externalLinksDialogBody .externalLinkCopy small {
+  color: var(--weather_dialog_subtle);
+}
+
+.external-links-dialog-enter-active,
+.external-links-dialog-leave-active {
+  transition: opacity 0.24s ease;
+}
+
+.external-links-dialog-enter-active .externalLinksDialogPanel,
+.external-links-dialog-leave-active .externalLinksDialogPanel {
+  transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.external-links-dialog-enter-from,
+.external-links-dialog-leave-to,
+.external-links-dialog-enter-from .externalLinksDialogPanel,
+.external-links-dialog-leave-to .externalLinksDialogPanel {
+  opacity: 0;
+}
+
+.external-links-dialog-enter-from .externalLinksDialogPanel,
+.external-links-dialog-leave-to .externalLinksDialogPanel {
+  transform: translate3d(0, 12px, 0) scale(0.985);
+}
+
+@media (max-width: 720px) {
+  .externalLinksDialogBackdrop {
+    padding: 8px;
+  }
+
+  .externalLinksDialogPanel {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+    border-radius: 16px;
+  }
+
+  .externalLinksDialogHeader {
+    padding: 18px 18px 14px;
+  }
+
+  .externalLinksDialogBody {
+    padding: 18px 18px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .externalLinksDialogTitle h2 {
+    font-size: 17px;
+    line-height: 23px;
+  }
+
+  .externalLinksDialogBody .externalLinkGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .externalLinksDialogHeader > button,
+  .external-links-dialog-enter-active,
+  .external-links-dialog-leave-active,
+  .external-links-dialog-enter-active .externalLinksDialogPanel,
+  .external-links-dialog-leave-active .externalLinksDialogPanel {
+    transition: none;
+  }
 }
 </style>
