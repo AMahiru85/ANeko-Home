@@ -94,25 +94,85 @@ ANeko - Home 是参考 zyyo 主页风格，基于 Astro、Vue 和 Cloudflare Wor
 
 ### 邮箱 Webhook 请求格式
 
-在 `/admin` → 邮箱中启用 Webhook、配置令牌、收件人和邮件模板。默认接口使用 `/api/mail/webhook`；新增接口使用 `/api/mail/webhook/{接口标识}`。两个路径都支持 GET 和 POST。
+在 `/admin` → 邮箱中启用 Webhook，并为接口配置令牌、收件人和邮件模板。请求会按照所选模板生成邮件并发送。
 
-GET 把令牌和数据放在 URL 查询参数中，适合只能发送简单 GET 请求的调用方：
+**基本信息**
 
-```text
-GET https://example.com/api/mail/webhook?token=<令牌>&event=order.created&orderId=1001
-GET https://example.com/api/mail/webhook/alerts?token=<令牌>&event=server.down&host=node-1
+| 项目 | 说明 |
+| --- | --- |
+| Base URL | 部署后站点的 HTTPS 域名，例如 `https://example.com`。 |
+| 默认接口 | `/api/mail/webhook` |
+| 指定接口 | `/api/mail/webhook/{endpointId}` |
+| 支持方法 | `GET`、`POST` |
+| 成功响应 | `200 OK`，JSON |
+
+`endpointId` 是后台接口标识，长度为 1–64 个字符，必须以字母或数字开头，其余字符可使用字母、数字、`.`、`_`、`-`。
+
+**认证**
+
+优先使用 `Authorization: Bearer <令牌>` 请求头。也可以通过 `token` 参数认证：GET 放在查询参数中，POST 放在 JSON 对象的 `token` 字段中。令牌在后台配置，长度为 32–256 个字符。
+
+| 名称 | 位置 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- | --- |
+| `Authorization` | 请求头 | 字符串 | 否 | 格式为 `Bearer <令牌>`；与 `token` 二选一。 |
+| `token` | GET 查询参数 / POST JSON | 字符串 | 否 | 令牌未放在请求头时必填；不会被写入模板数据。 |
+
+**GET 参数**
+
+```http
+GET /api/mail/webhook/{endpointId}?token=<令牌>&event=order.created&orderId=1001 HTTP/1.1
+Host: example.com
 ```
 
-POST 使用 JSON 对象传数据。令牌可以放在 `Authorization: Bearer <令牌>` 请求头中，也可以放在 JSON 的 `token` 字段：
+除 `token` 外，查询参数都是模板数据，值按字符串处理。GET 适用于只能发送简单查询参数的调用方；需要传嵌套对象时使用 POST。由于查询参数可能被代理或访问日志记录，调用方支持请求头时请通过 Bearer 头传令牌。
 
-```bash
-curl -X POST 'https://example.com/api/mail/webhook/alerts' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer <令牌>' \
-  -d '{"event":"order.created","order":{"id":1001},"user":{"name":"Aki"}}'
+**POST 参数**
+
+请求头：`Content-Type: application/json`。请求体必须是 JSON 对象，最大 2 MiB。除保留字段 `token` 外，字段均作为模板数据。
+
+```http
+POST /api/mail/webhook/alerts HTTP/1.1
+Host: example.com
+Content-Type: application/json
+Authorization: Bearer <令牌>
+Idempotency-Key: order-created-1001
+
+{"event":"order.created","order":{"id":1001},"user":{"name":"Aki"}}
 ```
 
-请求字段会用于渲染该接口关联的邮件模板。模板可使用 `{{event}}`、`{{order.id}}` 等字段路径；`{{json}}` 会插入完整请求数据（不包含令牌）。GET 查询参数的值均为文本；需要传嵌套对象时使用 POST。GET 的令牌位于 URL 中，可能被代理或访问日志记录，调用方支持请求头时建议使用 POST。
+`Idempotency-Key` 为可选请求头，长度为 8–120 个字符，可包含字母、数字、`.`、`_`、`:`、`-`。相同 key 和相同邮件内容在 24 小时内不会重复发送；省略时每次请求都会生成新的 key。
+
+**模板数据**
+
+请求数据用于渲染该接口所关联的模板。字段可以通过路径引用，例如 `{{event}}`、`{{order.id}}`、`{{user.name}}`。`{{json}}` 会插入完整请求数据的 JSON（不包含 `token`）。GET 参数是扁平字符串；POST 可发送嵌套 JSON 对象。
+
+**响应**
+
+成功时返回：
+
+```json
+{
+  "success": true,
+  "data": {
+    "sent": true,
+    "idempotencyKey": "webhook:order-created-1001",
+    "replayed": false
+  }
+}
+```
+
+重复提交相同幂等 key 和内容时，`replayed` 为 `true`。失败时返回 `{ "success": false, "error": "错误说明" }`。常见状态码：
+
+| 状态码 | 含义 |
+| --- | --- |
+| `400` | JSON 格式无效、参数或幂等 key 无效。 |
+| `401` | 令牌缺失或无效。 |
+| `404` | 接口标识不存在。 |
+| `409` | 幂等 key 冲突，或上次发送状态未知。 |
+| `413` | POST 请求体超过 2 MiB。 |
+| `429` | 发送频率超限；可参考 `Retry-After` 响应头。 |
+| `503` | Webhook 已停用或邮件服务暂不可用。 |
+| `500` | 未预期的服务端错误。 |
 
 ### 设置生产密钥
 
