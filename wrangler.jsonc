@@ -25,13 +25,13 @@
   "kv_namespaces": [
     {
       "binding": "ANEKO_KV",
-      "id": "24fd429d27fa4657a6c2572f15e0c44d"
+      "id": "348b4b46c76e480799fc0c615ecc5095"
     }
   ],
   "r2_buckets": [
     {
       "binding": "ANEKO_R2",
-      "bucket_name": "aneko-homepage-blog-disk-photos-aneko-r2"
+      "bucket_name": "aneko-home"
     }
   ]
 }
