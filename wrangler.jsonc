@@ -22,6 +22,9 @@
     "binding": "ASSETS",
     "directory": "./dist"
   },
+  "vars": {
+    "TURNSTILE_HOSTNAMES": "www.aneko.ink"
+  },
   "kv_namespaces": [
     {
       "binding": "ANEKO_KV",
