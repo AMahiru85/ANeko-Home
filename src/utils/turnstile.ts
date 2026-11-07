@@ -1,5 +1,3 @@
-import { DEFAULT_TURNSTILE_HOSTNAME } from './runtime-config'
-
 const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 const MAX_TOKEN_LENGTH = 2048
 const VERIFY_TIMEOUT_MS = 10_000
@@ -7,15 +5,6 @@ const VERIFY_TIMEOUT_MS = 10_000
 interface SiteverifyResponse {
   success?: unknown
   action?: unknown
-  hostname?: unknown
-}
-
-function expectedHostnames(bindings: Env) {
-  const configured = (bindings.TURNSTILE_HOSTNAMES?.trim() || DEFAULT_TURNSTILE_HOSTNAME)
-    .split(',')
-    .map((hostname) => hostname.trim().toLowerCase())
-    .filter(Boolean)
-  return new Set(configured)
 }
 
 export async function verifyTurnstileToken(
@@ -27,8 +16,7 @@ export async function verifyTurnstileToken(
   if (typeof token !== 'string' || token.length === 0 || token.length > MAX_TOKEN_LENGTH) return false
 
   const secret = bindings.TURNSTILE_SECRET?.trim()
-  const hostnames = expectedHostnames(bindings)
-  if (!secret || hostnames.size === 0) return false
+  if (!secret) return false
 
   const form = new URLSearchParams({ secret, response: token })
   const clientIp = request.headers.get('CF-Connecting-IP')
@@ -48,8 +36,6 @@ export async function verifyTurnstileToken(
     const result = await response.json() as SiteverifyResponse
     return result.success === true
       && result.action === expectedAction
-      && typeof result.hostname === 'string'
-      && hostnames.has(result.hostname.toLowerCase())
   } catch {
     return false
   } finally {

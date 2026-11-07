@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import {
-  assertMailHostsAllowed,
+  assertMailConfigurationConfigured,
   readMailConfiguration,
   readMailWebhookStore,
   publicMailWebhook,
@@ -28,7 +28,7 @@ const handleWebhook: APIRoute = async ({ request }) => {
     if (!webhook.enabled) return mailError('Webhook 已停用', 503)
 
     const configuration = await readMailConfiguration(bindings)
-    assertMailHostsAllowed(bindings, configuration)
+    assertMailConfigurationConfigured(configuration)
 
     const input = webhookMailInput(webhook, request, body)
     return mailSuccess(await sendMail(bindings, configuration, request, input))

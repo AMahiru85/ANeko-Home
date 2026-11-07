@@ -1,4 +1,4 @@
-import { DEFAULT_MAIL_CONFIG_KV_KEY } from './runtime-config'
+import { MAIL_CONFIG_STORAGE_KEY } from './runtime-config'
 import {
   CONTROL_CHARACTER_PATTERN,
   EMAIL_PATTERN,
@@ -25,7 +25,7 @@ export const MAIL_REQUEST_MAX_BODY_BYTES = 2 * 1024 * 1024
 
 export type MailBindings = Pick<
   Env,
-  'ANEKO_KV' | 'MAIL_CONFIG_KV_KEY' | 'MAIL_ALLOWED_HOSTS'
+  'ANEKO_KV'
 >
 
 export interface MailConnectionConfig {
@@ -420,33 +420,8 @@ function parseExpectedRevision(value: unknown) {
   return input.revision as string | null
 }
 
-function parseAllowedHosts(value?: string) {
-  const entries = new Set<string>()
-  for (const rawEntry of (value || '').split(/[\s,;]+/u)) {
-    const entry = rawEntry.trim().toLowerCase()
-    if (!entry) continue
-    entries.add(normalizeHostname(entry, 'MAIL_ALLOWED_HOSTS'))
-  }
-  return entries
-}
-
-function validateMailHostsAllowed(bindings: MailBindings, configuration: MailConfiguration) {
-  const allowed = parseAllowedHosts(bindings.MAIL_ALLOWED_HOSTS)
-  if (!allowed.size) return
-  for (const connection of [configuration.imap, configuration.smtp]) {
-    if (!allowed.has(connection.host)) {
-      validationError('邮箱服务器不在 MAIL_ALLOWED_HOSTS 允许列表中')
-    }
-  }
-}
-
-export function assertMailHostsAllowed(bindings: MailBindings, configuration: MailConfiguration) {
+export function assertMailConfigurationConfigured(configuration: MailConfiguration) {
   if (!configuration.configured) throw new MailConfigUnavailableError()
-  validateMailHostsAllowed(bindings, configuration)
-}
-
-function getKvKey(bindings: MailBindings) {
-  return bindings.MAIL_CONFIG_KV_KEY?.trim() || DEFAULT_MAIL_CONFIG_KV_KEY
 }
 
 function validateStoredRecord(
@@ -556,7 +531,7 @@ function readStoredWebhookStore(record: MailWebhookRecord): MailWebhookStore {
 }
 
 export async function readMailConfiguration(bindings: MailBindings): Promise<MailConfiguration> {
-  const raw = await bindings.ANEKO_KV.get(getKvKey(bindings))
+  const raw = await bindings.ANEKO_KV.get(MAIL_CONFIG_STORAGE_KEY)
   if (!raw) return emptyConfiguration()
   try {
     return readStoredConfiguration(parseMailConfigRecord(JSON.parse(raw)))
@@ -571,12 +546,11 @@ export async function saveMailConfiguration(bindings: MailBindings, value: unkno
   const expectedRevision = parseExpectedRevision(value)
   if (expectedRevision !== existing.revision) throw new MailConfigConflictError()
   const configuration = normalizeConfiguration(value, existing)
-  validateMailHostsAllowed(bindings, configuration)
 
   const revision = crypto.randomUUID()
   const updatedAt = new Date().toISOString()
   const record = createMailConfigRecord(configuration, revision, updatedAt)
-  await bindings.ANEKO_KV.put(getKvKey(bindings), JSON.stringify(record))
+  await bindings.ANEKO_KV.put(MAIL_CONFIG_STORAGE_KEY, JSON.stringify(record))
   return { ...configuration, revision, updatedAt }
 }
 
@@ -694,7 +668,6 @@ export async function resolveMailDraft(
     configuration = normalizeConfiguration(value, existing)
   }
   if (!configuration.configured && !allowIncompletePassword) throw new MailConfigUnavailableError()
-  validateMailHostsAllowed(bindings, configuration)
   return configuration
 }
 

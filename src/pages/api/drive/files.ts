@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ request }) => {
     const bindings = getBindings()
     const url = new URL(request.url)
     const prefix = normalizeFolderPath(url.searchParams.get('prefix') || '')
-    const rootPrefix = getDrivePrefix(bindings)
+    const rootPrefix = getDrivePrefix()
     const objectPrefix = `${rootPrefix}${prefix}`
     const result = await bindings.ANEKO_R2.list({
       prefix: objectPrefix,
@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request }) => {
     const uploaded: string[] = []
     for (const file of files) {
       const fileName = normalizeFileName(file.name)
-      const key = `${getDrivePrefix(bindings)}${prefix}${fileName}`
+      const key = `${getDrivePrefix()}${prefix}${fileName}`
       await bindings.ANEKO_R2.put(key, file.stream(), {
         httpMetadata: { contentType: file.type || 'application/octet-stream' },
       })
@@ -100,7 +100,7 @@ export const DELETE: APIRoute = async ({ request }) => {
     const relativeKey = isFolder
       ? normalizeFolderPath(rawKey)
       : normalizeObjectPath(rawKey)
-    const key = `${getDrivePrefix(bindings)}${relativeKey}`
+    const key = `${getDrivePrefix()}${relativeKey}`
 
     if (!isFolder) {
       await bindings.ANEKO_R2.delete(key)

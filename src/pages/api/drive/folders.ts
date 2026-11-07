@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request }) => {
     const prefix = normalizeFolderPath(typeof body.prefix === 'string' ? body.prefix : '')
     const folder = `${prefix}${name}/`
 
-    await bindings.ANEKO_R2.put(`${getDrivePrefix(bindings)}${folder}.keep`, new Uint8Array())
+    await bindings.ANEKO_R2.put(`${getDrivePrefix()}${folder}.keep`, new Uint8Array())
     return successResponse({ folder }, 201)
   } catch (error) {
     return errorResponse(error instanceof Error ? error.message : '创建文件夹失败')

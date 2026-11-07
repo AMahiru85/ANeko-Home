@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ request }) => {
     const bindings = getBindings()
     const url = new URL(request.url)
     const relativeKey = normalizeObjectPath(url.searchParams.get('key') || '')
-    const object = await bindings.ANEKO_R2.get(`${getDrivePrefix(bindings)}${relativeKey}`)
+    const object = await bindings.ANEKO_R2.get(`${getDrivePrefix()}${relativeKey}`)
     if (!object) return errorResponse('未找到文件', 404)
 
     return r2ObjectResponse(object, {

@@ -1,8 +1,8 @@
 import { env } from 'cloudflare:workers'
 import {
-  DEFAULT_BLOG_INDEX_KEY,
-  DEFAULT_DRIVE_PREFIX,
-  DEFAULT_PHOTO_MANIFEST_KEY,
+  BLOG_INDEX_KV_KEY,
+  DRIVE_OBJECT_PREFIX,
+  PHOTO_MANIFEST_KV_KEY,
 } from './runtime-config'
 
 export const BLOG_META_PREFIX = 'blog:post:'
@@ -14,17 +14,16 @@ export function getBindings(): Env {
   return env as Env
 }
 
-export function getBlogIndexKey(bindings: Env) {
-  return bindings.BLOG_INDEX_KEY?.trim() || DEFAULT_BLOG_INDEX_KEY
+export function getBlogIndexKey() {
+  return BLOG_INDEX_KV_KEY
 }
 
-export function getPhotoManifestKey(bindings: Env) {
-  return bindings.PHOTO_MANIFEST_KEY?.trim() || DEFAULT_PHOTO_MANIFEST_KEY
+export function getPhotoManifestKey() {
+  return PHOTO_MANIFEST_KV_KEY
 }
 
-export function getDrivePrefix(bindings: Env) {
-  const prefix = bindings.DRIVE_PREFIX?.trim() || DEFAULT_DRIVE_PREFIX
-  return prefix.endsWith('/') ? prefix : `${prefix}/`
+export function getDrivePrefix() {
+  return DRIVE_OBJECT_PREFIX
 }
 
 export function getIndexNowKey(bindings: Env) {

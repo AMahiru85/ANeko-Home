@@ -36,7 +36,7 @@ function isManifest(value: unknown): value is PhotoManifestItem[] {
 
 export const GET: APIRoute = async () => {
   const bindings = getBindings()
-  const raw = await bindings.ANEKO_KV.get(getPhotoManifestKey(bindings))
+  const raw = await bindings.ANEKO_KV.get(getPhotoManifestKey())
   if (!raw) return jsonResponse([], 200, 'public, max-age=30')
 
   try {
@@ -58,7 +58,7 @@ export const PUT: APIRoute = async ({ request }) => {
   try {
     const manifest = await request.json()
     if (!isManifest(manifest)) return errorResponse('照片清单格式无效')
-    await bindings.ANEKO_KV.put(getPhotoManifestKey(bindings), JSON.stringify(manifest))
+    await bindings.ANEKO_KV.put(getPhotoManifestKey(), JSON.stringify(manifest))
     return successResponse({ count: manifest.length })
   } catch {
     return errorResponse('请求内容不是有效的 JSON')

@@ -88,17 +88,6 @@ Cloudflare Workers 的 Git 集成使用以下构建设置：
 | `TURNSTILE_SECRET` | 必需 | Turnstile 服务端密钥，并用于管理员会话签名 |
 | `INDEXNOW_KEY` | 可选 | IndexNow 密钥，8–128 位字母、数字或短横线；必须与 `/{INDEXNOW_KEY}.txt` 的公开内容一致 |
 
-### Worker 普通变量
-
-| 名称 | 默认值 | 用途 |
-| --- | --- | --- |
-| `TURNSTILE_HOSTNAMES` | `www.aneko.ink` | 允许通过 Turnstile 验证的主机名；多个值用英文逗号分隔。 |
-| `MAIL_ALLOWED_HOSTS` | 不限制 | 允许连接的 IMAP/SMTP 主机名。生产环境建议配置允许列表。 |
-| `BLOG_INDEX_KEY` | `blog:index` | 博客索引使用的 KV 键名。 |
-| `PHOTO_MANIFEST_KEY` | `photos` | 相册清单使用的 KV 键名。 |
-| `DRIVE_PREFIX` | `drive/` | 云盘文件在 R2 中使用的对象前缀。 |
-| `MAIL_CONFIG_KV_KEY` | `mail:config:v3` | 邮箱配置使用的 KV 键名。 |
-
 ### 源码站点设置
 
 | 设置 | 文件 | 用途 |
@@ -252,9 +241,9 @@ Idempotency-Key: order-created-1001
 
 | 症状 | 检查项 |
 | --- | --- |
-| 管理员登录返回 `401` 或验证失败 | 检查 `ACCESS_CODE`、`TURNSTILE_SECRET`、`TURNSTILE_HOSTNAMES` 和实际访问域名；更换 `TURNSTILE_SECRET` 后需要重新登录。 |
+| 管理员登录返回 `401` 或验证失败 | 检查 `ACCESS_CODE`、`TURNSTILE_SECRET` 和 Cloudflare Turnstile 控制台中配置的允许域名；更换 `TURNSTILE_SECRET` 后需要重新登录。 |
 | 博客或相册返回 `503` | 检查 Worker 是否绑定正确的 `ANEKO_KV` 和 `ANEKO_R2`，并确认资源可用。 |
-| 邮箱连接测试失败 | 确认邮箱服务已启用 IMAP/SMTP，账号和应用专用密码正确；IMAP 使用 TLS 993，SMTP 使用 TLS 465，并检查 `MAIL_ALLOWED_HOSTS`。 |
+| 邮箱连接测试失败 | 确认邮箱服务已启用 IMAP/SMTP，账号和应用专用密码正确；IMAP 使用 TLS 993，SMTP 使用 TLS 465。 |
 | IndexNow 返回 `429` | 上游服务已限流；等待 `Retry-After` 时间后重试。（cloudflare cdn 节点IP应该是被拉黑了，提交都会返回429） |
 | IndexNow 密钥验证失败 | 确认 Worker Secret `INDEXNOW_KEY` 与可公开访问的 `/{INDEXNOW_KEY}.txt` 内容完全一致。 |
 

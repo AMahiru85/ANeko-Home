@@ -104,11 +104,11 @@ function isPostIndex(value: unknown): value is StoredBlogPost[] {
 }
 
 function indexCacheKey() {
-  return 'index:' + getBlogIndexKey(getBindings())
+  return 'index:' + getBlogIndexKey()
 }
 
 function bodyCacheKey(slug: string, version = 'legacy') {
-  return ['body', getBlogIndexKey(getBindings()), slug, version].join(':')
+  return ['body', getBlogIndexKey(), slug, version].join(':')
 }
 
 export async function getStoredPostIndex(options: { refresh?: boolean; allowStale?: boolean } = {}) {
@@ -121,7 +121,7 @@ export async function getStoredPostIndex(options: { refresh?: boolean; allowStal
   const bindings = getBindings()
   const readStartedAt = Date.now()
   try {
-    const raw = await readBlogStorage(() => bindings.ANEKO_KV.get(getBlogIndexKey(bindings)))
+    const raw = await readBlogStorage(() => bindings.ANEKO_KV.get(getBlogIndexKey()))
     const parsed: unknown = raw === null ? [] : JSON.parse(raw)
     // Refuse invalid indexes rather than silently dropping entries during a save.
     if (!isPostIndex(parsed)) throw new TypeError('Invalid blog index')
@@ -147,7 +147,7 @@ export async function saveStoredPostIndex(posts: StoredBlogPost[]) {
   if (!isPostIndex(posts)) throw new TypeError('Invalid blog index')
   const bindings = getBindings()
   const sorted = [...posts].sort((a, b) => Date.parse(b.pubDate) - Date.parse(a.pubDate))
-  await bindings.ANEKO_KV.put(getBlogIndexKey(bindings), JSON.stringify(sorted))
+  await bindings.ANEKO_KV.put(getBlogIndexKey(), JSON.stringify(sorted))
   await writeBlogSnapshot(indexCacheKey(), { savedAt: Date.now(), value: sorted })
 }
 
