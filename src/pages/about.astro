@@ -1,0 +1,137 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import SiteNav from '../components/SiteNav.astro';
+import AboutActions from '../components/AboutActions.astro';
+import AboutRichText from '../components/AboutRichText.astro';
+import TravelGlobe from '../components/TravelGlobe.vue';
+import AuthorHeading from '../components/AuthorHeading.astro';
+const recognitions = [['The Webby Awards', '(1)'], ['Awwwards', '(13)'], ['IDEA', '(10)'], ['CSS Design', '(8)'], ['FWA', '(3)']];
+---
+<SiteLayout title="Gabriel Beaugonin — About">
+  <SiteNav />
+  <header class="about-author" data-about-author>
+    <AuthorHeading />
+    <div class="about-author-actions" data-about-header-anchor><AboutActions /></div>
+  </header>
+  <main class="about-route" data-about-page aria-label="About Gabriel Beaugonin">
+    <div class="about-content-position">
+      <section class="about-content">
+        <div class="about-paragraphs">
+          <AboutRichText delay={0} content={[
+            { text: 'Award-winning UX Designer', ink: true },
+            { text: ', turning business goals, user needs, and messy problems into interfaces that feel obvious.' },
+          ]} />
+          <AboutRichText delay={0.26} content={[
+            { text: 'After studying at ' },
+            { text: 'Gobelins', ink: true, href: 'https://www.gobelins-school.com/' },
+            { text: ', I worked alongside sharp designers and developers at ' },
+            { text: 'Locomotive', ink: true, href: 'https://locomotive.ca/en' },
+            { text: ' ', ink: true }, { text: '&' }, { text: ' ', ink: true },
+            { text: 'Immersive Garden', ink: true, href: 'https://immersive-g.com/' },
+            { text: ', crafting impactful websites.' },
+          ]} />
+        </div>
+        <div class="about-recognition-block">
+          <AboutRichText as="h4" delay={0.52} content={[{ text: 'Recognitions:', ink: true }]} />
+          <ul class="about-recognitions-list">
+            {recognitions.map(([name, count], index) => <AboutRichText as="li" delay={(index + 3) * 0.26} content={[{ text: name, ink: true }, { text: ' ' + count }]} />)}
+          </ul>
+        </div>
+        <div class="about-paragraphs">
+          <AboutRichText delay={2.08} content={[
+            { text: 'Now freelance, travelling, and ' }, { text: 'available worldwide.', ink: true },
+            { text: ' Currently based in ' }, { text: 'Paris, France.', ink: true },
+          ]} />
+        </div>
+        <AboutRichText as="h4" delay={2.34} content={[
+          { text: 'A creative collaboration with ' },
+          { text: 'Leo Parpeix', ink: true, href: 'https://www.linkedin.com/in/leo-parpeix/' }, { text: ' and ' },
+          { text: 'Yanis Lebzar', ink: true, href: 'https://yanislebzar.com' }, { text: '.' },
+        ]} />
+      </section>
+    </div>
+    <a class="about-globe-slot" href="/travel" aria-label="Open the travel gallery" data-about-globe>
+      <TravelGlobe client:load transition:persist="travel-globe" /><span>Click to travel</span>
+    </a>
+    <div class="about-bottom-fade" aria-hidden="true"></div>
+  </main>
+</SiteLayout>
+<script>
+  import { setupAboutReveals } from '../scripts/about-reveal';
+  let cleanupAbout = () => {};
+  const setupAbout = () => {
+    cleanupAbout();
+    const route = document.querySelector<HTMLElement>('[data-about-page]');
+    if (!route) return;
+    const globe = document.querySelector<HTMLAnchorElement>('[data-about-globe]');
+    globe?.addEventListener('click', () => {
+      const rect = globe.getBoundingClientRect();
+      try { sessionStorage.setItem('gabriel:travel-origin', JSON.stringify({ x: (rect.left + rect.width / 2) / innerWidth, y: (rect.top + rect.height / 2) / innerHeight, scrollY, at: Date.now() })); } catch {}
+    });
+    try {
+      if (sessionStorage.getItem('gabriel:travel-return') === 'true') {
+        sessionStorage.removeItem('gabriel:travel-return');
+        const saved = JSON.parse(sessionStorage.getItem('gabriel:travel-origin') || 'null');
+        if (saved) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo(0, saved.scrollY || 0)));
+      }
+    } catch {}
+    let disposed = false;
+    let resizeFrame = 0;
+    const measureHeader = () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        if (disposed || window.innerWidth <= 768) return;
+        const anchors = [...document.querySelectorAll<HTMLElement>('[data-about-header-anchor]')];
+        const bottom = anchors.reduce((value, anchor) => Math.max(value, anchor.getBoundingClientRect().bottom + window.scrollY), 0);
+        route.style.setProperty('--about-header-bottom', Math.ceil(bottom) + 'px');
+      });
+    };
+    const header = document.querySelector<HTMLElement>('[data-about-author]');
+    const headerObserver = new ResizeObserver(measureHeader);
+    if (header) headerObserver.observe(header);
+    window.addEventListener('resize', measureHeader);
+    measureHeader();
+    const stopReveals = setupAboutReveals(route);
+    cleanupAbout = () => {
+      disposed = true; cancelAnimationFrame(resizeFrame); headerObserver.disconnect();
+      window.removeEventListener('resize', measureHeader); stopReveals();
+    };
+  };
+  document.addEventListener('astro:page-load', setupAbout);
+  document.addEventListener('astro:before-swap', () => cleanupAbout());
+  if (document.readyState === 'complete') setupAbout();
+</script>
+<style>
+  .about-globe-slot { display: block; }
+  .about-author { position: absolute; top: 0; left: 25.7rem; z-index: 50; height: 100svh; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 5rem; pointer-events: none; }
+  .about-author-heading { pointer-events: auto; }
+  .about-author-heading h1, .about-author-heading p { width: 40rem; font-size: 3.2rem; line-height: 1; font-weight: 400; letter-spacing: 0; white-space: nowrap; }
+  .about-author-heading h1 { color: #1a1a1a; }
+  .about-author-heading p { color: #9f9f9f; }
+  .about-author-actions { pointer-events: auto; }
+  .about-route { position: relative; z-index: 10; min-height: 100svh; width: 100%; padding-bottom: 21.217rem; background: #f6f6f6; animation: about-route-enter .3s ease-out both; }
+  .about-content-position { padding: calc(var(--about-header-bottom, 50svh + 8.8rem) + 18rem) 0 0 25.7rem; }
+  .about-content { display: flex; flex-direction: column; gap: 10rem; width: 57.1rem; }
+  .about-paragraphs { display: flex; flex-direction: column; gap: 2.4rem; }
+  .about-recognition-block { display: flex; flex-direction: column; gap: 1.6rem; }
+  .about-recognitions-list { list-style: none; margin: 0; padding: 0; }
+  .about-globe-slot { position: fixed; top: 50%; right: 10rem; z-index: 20; width: 40rem; height: 40rem; transform: translateY(-50%); }
+  .about-globe-slot :global(.travel-globe) { width: 100%; height: 100%; }
+  .about-globe-slot > span { position: absolute; top: calc(75.8666% + 3.5rem); left: 50%; transform: translateX(-50%); color: rgba(10,10,10,.3); font-size: 1.4rem; white-space: nowrap; pointer-events: none; }
+  .about-bottom-fade { position: fixed; inset: auto 0 0; height: 8rem; z-index: 40; pointer-events: none; background: linear-gradient(to top,rgba(246,246,246,.65) 0%,rgba(246,246,246,.65) 40%,rgba(246,246,246,.39) 60%,rgba(246,246,246,.13) 80%,rgba(246,246,246,0) 52%); }
+  @keyframes about-route-enter { from { opacity: 0; } to { opacity: 1; } }
+  @media (min-width: 1920px) { .about-globe-slot { width: 42rem; height: 42rem; } }
+  @media (max-width: 768px) {
+    .about-author { inset: 0; width: 100%; height: 100svh; align-items: center; justify-content: flex-start; gap: 0; padding-top: 2rem; }
+    .about-author-heading { text-align: center; }
+    .about-author-heading h1, .about-author-heading p { width: auto; font-size: 1.8rem; }
+    .about-author-actions { position: fixed; left: 50%; bottom: 4rem; transform: translateX(-50%); }
+    .about-route { padding-bottom: 13rem; }
+    .about-content-position { padding: 24.4rem 4.4rem 0; }
+    .about-content { width: 100%; gap: 6rem; }
+    .about-globe-slot { position: relative; top: auto; right: auto; width: min(40rem,calc(100vw - 3.2rem)); height: min(40rem,calc(100vw - 3.2rem)); margin: 13.7rem auto 6.85rem; transform: none; }
+    .about-globe-slot > span { display: none; }
+    .about-bottom-fade { height: 16rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { .about-route { animation: none; } }
+</style>

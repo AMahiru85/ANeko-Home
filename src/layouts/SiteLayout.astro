@@ -1,0 +1,35 @@
+---
+import '../styles/global.css';
+import '../styles/route-motion.css';
+import { ClientRouter } from 'astro:transitions';
+
+interface Props {
+  title?: string;
+}
+
+const { title = 'Gabriel Beaugonin — UX Designer' } = Astro.props;
+const description = 'Portfolio of Gabriel Beaugonin, award-winning UX designer based in Paris. Selected work, recognitions, and contact.';
+const canonical = new URL(Astro.url.pathname, 'https://www.gabrielbeaugonin.com').toString();
+---
+
+<!doctype html>
+<html lang="en" transition:animate="none">
+  <head>
+    <script is:inline>
+      window.__gabrielInitialPathname ??= location.pathname;
+      document.documentElement.dataset.initialEntry = window.__gabrielInitialPathname === '/' ? 'home' : 'inner';
+    </script>
+    <ClientRouter />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />     <meta name="robots" content="index, follow" />     <link rel="canonical" href={canonical} />     <meta property="og:type" content="website" />     <meta property="og:site_name" content="Gabriel Beaugonin" />     <meta property="og:title" content={title} />     <meta property="og:description" content={description} />     <meta property="og:url" content={canonical} />     <meta property="og:image" content="/favicon.svg" />     <meta name="twitter:card" content="summary_large_image" />     <meta name="twitter:title" content={title} />     <meta name="twitter:description" content={description} />     <meta name="twitter:image" content="/favicon.svg" />     <link rel="preload" href="/fonts/suisseintl-book.woff2" as="font" type="font/woff2" crossorigin />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+    <script>
+      import { installRouteMotion } from '../lib/route-motion';
+      installRouteMotion();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,106 @@
+{
+  "desktop": {
+    "flow": {
+      "_collapsed": true,
+      "groupSpacing": 21.8,
+      "cardSpread": 1.53,
+      "groupParallax": 3,
+      "groupSpeedVariance": 1.59,
+      "scrollSensitivity": 0.0115,
+      "smoothing": 7
+    },
+    "depth": {
+      "_collapsed": true,
+      "anchorZ": -6,
+      "farFieldZ": -22,
+      "behindCameraZ": 8.8,
+      "activeTriggerZ": 0.25
+    },
+    "look": {
+      "_collapsed": true,
+      "driftAmount": 0.28,
+      "cardScale": 1.03,
+      "layoutSpread": 1,
+      "visibleBehind": 2,
+      "visibleAhead": 4
+    },
+    "opacity": {
+      "_collapsed": true,
+      "nearFadeStart": 0.83,
+      "nearFadeStrength": 1
+    },
+    "fog": {
+      "_collapsed": true,
+      "farFogStart": 0.27,
+      "farFogStrength": 0.62,
+      "farOpacityFloor": 0
+    },
+    "scrollBend": {
+      "_collapsed": true,
+      "enabled": 1,
+      "strength": 0.05,
+      "direction": -1,
+      "velocityDamping": 7,
+      "curveExponent": 2,
+      "meshSegments": 26
+    },
+    "autoScroll": {
+      "_collapsed": true,
+      "enabled": 1,
+      "speed": 1.4,
+      "direction": 1
+    }
+  },
+  "mobile": {
+    "flow": {
+      "_collapsed": true,
+      "groupSpacing": 20,
+      "cardSpread": 0.95,
+      "groupParallax": 1.35,
+      "groupSpeedVariance": 1.59,
+      "scrollSensitivity": 0.0115,
+      "smoothing": 7
+    },
+    "depth": {
+      "_collapsed": true,
+      "anchorZ": -6,
+      "farFieldZ": -22,
+      "behindCameraZ": 8.8,
+      "activeTriggerZ": 0.25
+    },
+    "look": {
+      "_collapsed": true,
+      "driftAmount": 0.38,
+      "cardScale": 1.5,
+      "layoutSpread": 1.32,
+      "visibleBehind": 2,
+      "visibleAhead": 4
+    },
+    "opacity": {
+      "_collapsed": true,
+      "nearFadeStart": 0.93,
+      "nearFadeStrength": 1
+    },
+    "fog": {
+      "_collapsed": true,
+      "farFogStart": 0.27,
+      "farFogStrength": 0.62,
+      "farOpacityFloor": 0
+    },
+    "scrollBend": {
+      "_collapsed": true,
+      "enabled": 1,
+      "strength": 0.05,
+      "direction": -1,
+      "velocityDamping": 7,
+      "curveExponent": 2,
+      "meshSegments": 26
+    },
+    "autoScroll": {
+      "_collapsed": true,
+      "enabled": 1,
+      "speed": 1.4,
+      "direction": 1
+    }
+  }
+}

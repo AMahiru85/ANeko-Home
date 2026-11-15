@@ -1,0 +1,13 @@
+---
+const links = [
+  ['Home', '/'],
+  ['About', '/about'],
+  ['Travel', '/travel'],
+];
+---
+
+<nav class="sr-only" aria-label="Site">
+  <ul>
+    {links.map(([label, href]) => <li><a href={href}>{label}</a></li>)}
+  </ul>
+</nav>

@@ -1,0 +1,6 @@
+/* Routes own their geometric transitions; do not layer Astro's page fade on top. */
+.home-shell {animation:none!important;}
+::view-transition-group(root) {animation:none;}
+::view-transition-old(root),::view-transition-new(root) {animation:none;mix-blend-mode:normal;}
+html[data-route-transition="home-about"] *,html[data-route-transition="about-home"] * {view-transition-name:none!important;}
+html[data-route-transition="home-about"] .about-route {animation:none!important;}

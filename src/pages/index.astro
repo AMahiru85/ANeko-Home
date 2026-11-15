@@ -1,0 +1,60 @@
+---
+import SiteLayout from '../layouts/SiteLayout.astro';
+import SiteNav from '../components/SiteNav.astro';
+import SocialMenu from '../components/SocialMenu.vue';
+import ProjectCarousel from '../components/ProjectCarousel.vue';
+import ButtonIcon from '../components/ButtonIcon.vue';
+import ButtonMagnet from '../components/ButtonMagnet.vue';
+import AuthorHeading from '../components/AuthorHeading.astro';
+import TravelGlobe from '../components/TravelGlobe.vue';
+import { projects } from '../data/projects';
+---
+
+<SiteLayout>
+  <SiteNav active="Home" />
+  <div class="travel-preload" aria-hidden="true"><TravelGlobe client:load transition:persist="travel-globe" /></div>
+  <main class="home-shell">
+    <ProjectCarousel projects={projects} client:load />
+    <section class="intro" aria-labelledby="intro-title" data-home-header>
+      <AuthorHeading />
+      <div class="intro-actions">
+        <div class="home-about-slot" data-home-about-enter>
+          <ButtonMagnet client:load>
+            <a class="about-button" href="/about" aria-label="Open About Page" data-home-about-link><span class="home-about-icon-mask"><span data-home-about-icon><ButtonIcon name="user" /></span></span></a>
+          </ButtonMagnet>
+        </div>
+        <SocialMenu client:load />
+      </div>
+    </section>
+  </main>
+</SiteLayout>
+
+<script>
+  import { bindHomeHeader } from '../lib/home-header-motion';
+  let dispose = () => {};
+  let current: HTMLElement | null = null;
+  const setup = () => {
+    const header = document.querySelector<HTMLElement>('[data-home-header]');
+    if (header === current) return;
+    dispose(); current = header;
+    if (header) dispose = bindHomeHeader(header);
+  };
+  document.addEventListener('astro:page-load', setup);
+  document.addEventListener('astro:before-swap', () => { dispose(); current = null; });
+  setup();
+</script>
+
+<style>
+  .intro .intro-heading, .intro .intro-actions { animation: none !important; }
+  .travel-preload { position: fixed; left: -10000px; top: 0; width: 2rem; height: 2rem; overflow: hidden; opacity: 0; pointer-events: none; z-index: -1; }
+  .travel-preload .travel-globe { width: 100%; height: 100%; }
+  .intro .intro-heading { display: block; gap: 0; }
+  .intro-title-mask { overflow: hidden; padding-bottom: .25rem; }
+  .intro-subtitle-mask { overflow: hidden; padding-bottom: .5rem; }
+  .home-about-slot { width: 5.4rem; height: 5.4rem; flex-shrink: 0; }
+  .home-about-icon-mask { position: relative; display: block; width: 2rem; height: 2rem; overflow: hidden; }
+  [data-home-about-icon] { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  html[data-initial-entry="home"] [data-home-header]:not([data-home-header-ready]) [data-home-heading-scale] { transform: scale(.5); }
+  html[data-initial-entry="home"] [data-home-header]:not([data-home-header-ready]) [data-home-heading-opacity],
+  html[data-initial-entry="home"] [data-home-header]:not([data-home-header-ready]) [data-home-about-enter] { opacity: 0; }
+</style>
