@@ -4,15 +4,21 @@ import ButtonIcon from './ButtonIcon.vue';
 import ButtonMagnet from './ButtonMagnet.vue';
 import { BUTTON_ROTATE_SPRING, EASE_OUT_CUBIC, useButtonMotion } from '../lib/button-motion';
 import { subscribeHomeIntro } from '../lib/home-intro';
+import { navigate } from 'astro:transitions/client';
 
-const open=ref(false),renderContacts=ref(false),mobile=ref(false),emailHover=ref(false);
+const props=withDefaults(defineProps<{about?:boolean}>(),{about:false});
+const about=ref(props.about);
+const open=ref(props.about),renderContacts=ref(props.about),mobile=ref(false),emailHover=ref(false);
 const wrapper=ref<HTMLElement|null>(null);
 const introElement=ref<HTMLElement|null>(null);
-const contactRow=ref<HTMLElement|null>(null),chatIcon=ref<HTMLElement|null>(null),closeIcon=ref<HTMLElement|null>(null);
-const introOpacity=ref(0),introY=ref(28);
-const rotate=useButtonMotion(0),rowShift=useButtonMotion(0);
+const contactRow=ref<HTMLElement|null>(null),chatIcon=ref<HTMLElement|null>(null),closeIcon=ref<HTMLElement|null>(null),backIcon=ref<HTMLElement|null>(null);
+const introOpacity=ref(props.about?1:0),introY=ref(props.about?0:28);
+const rotate=useButtonMotion(props.about?-90:0),rowShift=useButtonMotion(0);
+const initialChatStyle=props.about?'transform:scale(.5);opacity:0':'transform:scale(1);opacity:1';
+const initialBackStyle=props.about?'transform:scale(1);opacity:1':'transform:scale(.5);opacity:0';
+const initialContactsStyle=props.about?'opacity:1':'opacity:0';
 const email='gbeaugonin@gmail.com';
-const itemMotion=[0,1,2].map(()=>({x:useButtonMotion(-10),rotate:useButtonMotion(80),scale:useButtonMotion(.8),opacity:useButtonMotion(0),blur:useButtonMotion(2)}));
+const itemMotion=[0,1,2].map(()=>({x:useButtonMotion(props.about?0:-10),rotate:useButtonMotion(props.about?0:80),scale:useButtonMotion(props.about?1:.8),opacity:useButtonMotion(props.about?1:0),blur:useButtonMotion(props.about?0:2)}));
 const contacts=computed(()=>[
   {name:mobile.value?'Send email':'Copy email',icon:'email' as const,href:'mailto:'+email},
   {name:'X (Twitter)',icon:'x' as const,href:'https://x.com/gabrielbgnn'},
@@ -57,22 +63,37 @@ const animateContactOpacity=(visible:boolean)=>{
   animation.onfinish=()=>{if(contactOpacityAnimation!==animation)return;contactOpacityAnimation=undefined;animation.cancel();};
 };
 const updateRowShift=()=>{
-  const shift=mobile.value&&open.value?-8.7*rootSize():0;
+  const shift=mobile.value?(about.value?-5.8*rootSize():open.value?-8.7*rootSize():0):0;
   const current=parent?getComputedStyle(parent).translate.split(' ')[0]:'0';
   const start=Number.parseFloat(current)||rowShift.value.value;
   rowShift.motion.stop();
+  activeRowAnimation?.cancel();
+  activeRowAnimation=undefined;
   if(reduced()){rowShift.motion.set(shift);parent?.style.setProperty('translate',shift+'px 0');return;}
   if(parent){
-    const animation=parent.animate([{translate:start+'px 0'},{translate:shift+'px 0'}],{duration:450,easing:EASE_OUT_CUBIC,fill:'both'});
-    animation.onfinish=()=>{rowShift.motion.set(shift);parent?.style.setProperty('translate',shift+'px 0');animation.cancel();};
-    activeRowAnimation?.cancel();activeRowAnimation=animation;
+    const target=parent;
+    const animation=target.animate([{translate:start+'px 0'},{translate:shift+'px 0'}],{duration:450,easing:EASE_OUT_CUBIC,fill:'both'});
+    activeRowAnimation=animation;
+    animation.onfinish=()=>{
+      if(activeRowAnimation!==animation||parent!==target)return;
+      rowShift.motion.set(shift);target.style.setProperty('translate',shift+'px 0');
+      activeRowAnimation=undefined;animation.cancel();
+    };
   }
 };
+const updateModeIcons=()=>{
+  animateToggleIcon(chatIcon.value,!open.value&&!about.value);
+  animateToggleIcon(closeIcon.value,open.value&&!about.value);
+  animateToggleIcon(backIcon.value,about.value);
+};
+watch(about,()=>{
+  updateModeIcons();
+  updateRowShift();
+});
 watch(open,async(value)=>{
   const generation=++toggleGeneration;
   clearTimeout(closeTimer);
-  animateToggleIcon(chatIcon.value,!value);
-  animateToggleIcon(closeIcon.value,value);
+  updateModeIcons();
   rotate.motion.spring(value?-90:0,BUTTON_ROTATE_SPRING);
   updateRowShift();
   if(value){
@@ -132,33 +153,70 @@ const copyEmail=async()=>{
   toast.value=copied?'copied to clipboard':'copy unavailable — '+email;
   clearTimeout(toastTimer);toastTimer=window.setTimeout(()=>{toast.value='';},4000);
 };
+const refreshParent=()=>{
+  const next=wrapper.value?.closest<HTMLElement>('.author-actions')??wrapper.value?.closest<HTMLElement>('.intro-actions')??wrapper.value?.parentElement??null;
+  if(next===parent)return;
+  activeRowAnimation?.cancel();activeRowAnimation=undefined;
+  parent=next;previousTranslate=parent?.style.translate??'';
+};
+const setRoute=(pathname:string)=>{
+  const nextAbout=pathname==='/about'||pathname==='/about/';
+  const changed=nextAbout!==about.value;
+  about.value=nextAbout;
+  if(changed||nextAbout)open.value=nextAbout;
+};
+const routeTarget=(event:Event)=>{
+  const pathname=(event as CustomEvent<{pathname?:string}>).detail?.pathname;
+  if(typeof pathname!=='string')return;
+  refreshParent();setRoute(pathname);
+};
+const syncRoute=()=>{
+  refreshParent();setRoute(location.pathname);
+  updateModeIcons();updateRowShift();
+};
+const toggle=()=>{
+  if(about.value){void navigate('/');return;}
+  open.value=!open.value;
+};
+const keydown=(event:KeyboardEvent)=>{
+  if(event.key!=='Escape')return;
+  if(about.value){void navigate('/');return;}
+  if(open.value)open.value=false;
+};
 onMounted(()=>{
-  parent=wrapper.value?.closest<HTMLElement>('.intro-actions')??wrapper.value?.parentElement??null;
-  previousTranslate=parent?.style.translate??'';
+  refreshParent();
   resize();window.addEventListener('resize',resize);
+  syncRoute();
+  window.addEventListener('gabriel:author-route',routeTarget);
+  window.addEventListener('keydown',keydown);
+  document.addEventListener('astro:page-load',syncRoute);
   stopIntro=subscribeHomeIntro((snapshot)=>{void nextTick(()=>syncHomeIntro(snapshot));});
 });
 onUnmounted(()=>{
   stopIntro();introAnimation?.cancel();
   contactOpacityAnimation?.cancel();iconAnimations.forEach(animation=>animation.cancel());iconAnimations.clear();
   window.removeEventListener('resize',resize);clearTimeout(closeTimer);clearTimeout(toastTimer);activeRowAnimation?.cancel();
+  window.removeEventListener('gabriel:author-route',routeTarget);
+  window.removeEventListener('keydown',keydown);
+  document.removeEventListener('astro:page-load',syncRoute);
   if(parent)parent.style.translate=previousTranslate;
 });
 </script>
 
 <template>
-  <div ref="wrapper" class="social-wrap source-social">
+  <div ref="wrapper" class="social-wrap source-social" :class="{'source-social-about':about}">
     <div ref="introElement" class="source-social-intro" :style="{opacity:introOpacity,transform:'translateY('+introY+'px)'}">
       <ButtonMagnet>
-        <button class="social-button source-social-toggle" :class="{'source-social-open':open}" type="button" :style="{transform:'rotate('+rotate.value.value+'deg)'}" :aria-expanded="open" :aria-label="open?'Close Social Links':'Open Social Links'" @click="open=!open">
+        <button class="social-button source-social-toggle" :class="{'source-social-open':open||about}" type="button" :style="{transform:'rotate('+rotate.value.value+'deg)'}" :aria-expanded="about?undefined:open" :aria-label="about?'Back to Home':open?'Close Social Links':'Open Social Links'" @click="toggle">
           <span class="source-social-icon-mask" aria-hidden="true">
-            <span ref="chatIcon" data-icon="chat" class="source-social-toggle-icon" style="transform:scale(1);opacity:1"><ButtonIcon name="chat" color="#1a1a1a" /></span>
+            <span ref="chatIcon" data-icon="chat" class="source-social-toggle-icon" :style="initialChatStyle"><ButtonIcon name="chat" color="#1a1a1a" /></span>
             <span ref="closeIcon" data-icon="close" class="source-social-toggle-icon" style="transform:scale(.5);opacity:0"><ButtonIcon name="close" color="#fff" /></span>
+            <span ref="backIcon" data-icon="back" class="source-social-toggle-icon" :style="initialBackStyle"><span style="display:inline-flex;transform:rotate(90deg)"><ButtonIcon name="back" color="#fff" /></span></span>
           </span>
         </button>
       </ButtonMagnet>
     </div>
-    <div v-if="renderContacts" ref="contactRow" class="source-social-links" :class="{'source-social-links-open':open}" :aria-hidden="!open" style="opacity:0">
+    <div v-if="renderContacts" ref="contactRow" class="source-social-links" :class="{'source-social-links-open':open}" :aria-hidden="!open" :style="initialContactsStyle">
       <div v-for="(contact,index) in contacts" :key="contact.icon" class="source-contact-motion" :style="itemStyle(index)">
         <ButtonMagnet>
           <button v-if="contact.icon==='email'&&!mobile" class="social-button source-contact" type="button" :aria-label="contact.name" :tabindex="open?0:-1" @mouseenter="emailHover=true" @mouseleave="emailHover=false" @click="copyEmail"><ButtonIcon name="email" /></button>
@@ -172,7 +230,8 @@ onUnmounted(()=>{
 </template>
 
 <style scoped>
-.source-social {position:relative;width:5.4rem;height:5.4rem;flex-shrink:0;}
+.source-social {position:relative;width:5.4rem;height:5.4rem;flex-shrink:0;translate:0 0;transition:translate .45s cubic-bezier(.215,.61,.355,1);}
+.source-social-about {translate:-5.8rem 0;}
 .source-social-intro {position:relative;width:5.4rem;height:5.4rem;will-change:transform,opacity;}
 .source-social .social-button {position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;width:5.4rem;height:5.4rem;min-width:5.4rem;padding:2rem;border:0;border-radius:1.5rem;background:#fff;color:#1a1a1a;font:inherit;line-height:1;cursor:pointer;scale:1;transition:border-radius .28s cubic-bezier(.785,.135,.15,.86),background-color .3s cubic-bezier(.785,.135,.15,.86),scale .3s cubic-bezier(.075,.82,.165,1);}
 .source-social .social-button:hover {transform:none;}
@@ -190,5 +249,5 @@ onUnmounted(()=>{
 .source-social .social-button:active {scale:.97;}
 .source-social .social-button:focus-visible {outline:2px solid #1a1a1a;outline-offset:2px;}
 @media (max-width:768px) {.source-copy-toast {top:calc(env(safe-area-inset-top) + 2rem);bottom:auto;}}
-@media (prefers-reduced-motion:reduce) {.source-social .social-button,.source-email-tooltip {transition:none;}}
+@media (prefers-reduced-motion:reduce) {.source-social,.source-social .social-button,.source-email-tooltip {transition:none;}}
 </style>

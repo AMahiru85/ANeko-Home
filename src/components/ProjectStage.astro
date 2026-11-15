@@ -1,0 +1,7 @@
+---
+import ProjectCarousel from './ProjectCarousel.vue';
+import { projects } from '../data/projects';
+---
+<div class="project-stage" transition:persist="project-carousel">
+  <ProjectCarousel projects={projects} client:load />
+</div>

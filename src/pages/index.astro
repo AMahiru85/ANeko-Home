@@ -1,29 +1,21 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro';
 import SiteNav from '../components/SiteNav.astro';
-import SocialMenu from '../components/SocialMenu.vue';
-import ProjectCarousel from '../components/ProjectCarousel.vue';
-import ButtonIcon from '../components/ButtonIcon.vue';
-import ButtonMagnet from '../components/ButtonMagnet.vue';
+import ProjectStage from '../components/ProjectStage.astro';
+import AuthorActions from '../components/AuthorActions.astro';
 import AuthorHeading from '../components/AuthorHeading.astro';
 import TravelGlobe from '../components/TravelGlobe.vue';
-import { projects } from '../data/projects';
 ---
 
 <SiteLayout>
   <SiteNav active="Home" />
   <div class="travel-preload" aria-hidden="true"><TravelGlobe client:load transition:persist="travel-globe" /></div>
   <main class="home-shell">
-    <ProjectCarousel projects={projects} client:load />
+    <ProjectStage />
     <section class="intro" aria-labelledby="intro-title" data-home-header>
       <AuthorHeading />
       <div class="intro-actions">
-        <div class="home-about-slot" data-home-about-enter>
-          <ButtonMagnet client:load>
-            <a class="about-button" href="/about" aria-label="Open About Page" data-home-about-link><span class="home-about-icon-mask"><span data-home-about-icon><ButtonIcon name="user" /></span></span></a>
-          </ButtonMagnet>
-        </div>
-        <SocialMenu client:load />
+        <AuthorActions />
       </div>
     </section>
   </main>

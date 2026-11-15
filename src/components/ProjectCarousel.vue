@@ -14,25 +14,36 @@ const active=computed(()=>props.projects.length?modulo(cursor.value,props.projec
 const stack=computed(()=>props.projects.length?Array.from({length:7},(_,i)=>{
   const offset=i-3,key=cursor.value+offset;return {key,offset,project:props.projects[modulo(key,props.projects.length)]};
 }):[]);
-type Motion={y:MotionNumber;rotate:MotionNumber;scale:MotionNumber;opacity:MotionNumber;magnetX:MotionNumber;magnetY:MotionNumber;magnetEnabled:boolean;magnetInside:boolean;node?:HTMLElement;magnetNode?:HTMLElement};
+type Motion={x:MotionNumber;y:MotionNumber;rotate:MotionNumber;scale:MotionNumber;opacity:MotionNumber;magnetX:MotionNumber;magnetY:MotionNumber;magnetEnabled:boolean;magnetInside:boolean;node?:HTMLElement;magnetNode?:HTMLElement};
 const motions=new Map<number,Motion>(),videos=new Map<number,HTMLVideoElement>(),warmVideos=new Map<string,HTMLVideoElement>();
 const timers=new Set<number>(),topMask=ref<HTMLElement>(),bottomMask=ref<HTMLElement>();
 const maskY=new MotionNumber(0),maskOpacity=new MotionNumber(1);
 let height=0,raf=0,lastTime=0,wheelUntil=0,repeatAt=0,dragAt=0,suppressClick=false;
 let magnetReturnUntil=0;
 let unsubscribeIntro:undefined|(()=>void);
+type CarouselRoutePhase='home'|'exiting-about'|'about'|'returning-home';
+const routePhase=ref<CarouselRoutePhase>('home');
+let routeTimer=0;
 const pointer={id:null as number|null,x:0,y:0,dragging:false,captured:false,triggered:false};
-const allowed=()=>mounted.value&&!intro.value&&location.pathname==='/';
+const allowed=()=>mounted.value&&!intro.value&&routePhase.value==='home'&&location.pathname==='/';
 const source=(project:Project)=>mobile.value&&project.mobileVideo?.trim()?project.mobileVideo:project.video;
 const later=(callback:()=>void,ms:number)=>{const id=window.setTimeout(()=>{timers.delete(id);callback();},ms);timers.add(id);};
 function position(offset:number) {
   return {y:offset===0?0:Math.sign(offset)*(height*(mobile.value?.37:.4)+Math.max(0,Math.abs(offset)-1)*(mobile.value?43:35)),
     rotate:offset===0?0:Math.sign(offset)*(mobile.value?93:98),scale:offset===0?1:mobile.value?.76:.8};
 }
+function routePosition(offset:number){
+  const normal=position(offset);
+  if(routePhase.value==='exiting-about'||routePhase.value==='about'){
+    if(offset===0)return {x:Math.max(window.innerWidth*.6,420),y:0,rotate:0,scale:1,opacity:1};
+    return {x:0,y:Math.sign(offset)*height*.6,rotate:normal.rotate,scale:mobile.value?.76:.8,opacity:0};
+  }
+  return {x:0,y:normal.y,rotate:normal.rotate,scale:normal.scale,opacity:offset===0?1:0};
+}
 function draw() {
   motions.forEach(m=>{
     if(!m.node)return;
-    m.node.style.transform='translateY('+m.y.value+'px) scale('+m.scale.value+') rotateX('+m.rotate.value+'deg)';
+    m.node.style.transform='translateX('+m.x.value+'px) translateY('+m.y.value+'px) scale('+m.scale.value+') rotateX('+m.rotate.value+'deg)';
     if(m.magnetNode)m.magnetNode.style.transform='translateX('+m.magnetX.value+'px) translateY('+m.magnetY.value+'px)';
     m.node.querySelectorAll<HTMLElement>('.card-visuals,.card-copy').forEach(node=>node.style.opacity=String(m.opacity.value));
   });
@@ -41,7 +52,7 @@ function draw() {
 }
 function tick(now:number) {
   const dt=(now-lastTime)/1000;lastTime=now;raf=0;let moving=false;
-  motions.forEach(m=>[m.y,m.rotate,m.scale,m.opacity,m.magnetX,m.magnetY].forEach(axis=>{axis.step(dt);moving||=axis.moving;}));
+  motions.forEach(m=>[m.x,m.y,m.rotate,m.scale,m.opacity,m.magnetX,m.magnetY].forEach(axis=>{axis.step(dt);moving||=axis.moving;}));
   [maskY,maskOpacity].forEach(axis=>{axis.step(dt);moving||=axis.moving;});draw();
   if(moving)raf=requestAnimationFrame(tick);
 }
@@ -52,7 +63,7 @@ function releaseMagnet(m:Motion,disabled=false){
   else {m.magnetX.spring(0,CARD_MAGNET.releaseSpring,true);m.magnetY.spring(0,CARD_MAGNET.releaseSpring,true);}
 }
 function syncMagnetEnabled(){
-  const enabled=mounted.value&&!mobile.value&&!intro.value&&!dragging.value&&performance.now()>=magnetReturnUntil&&location.pathname==='/';
+  const enabled=mounted.value&&routePhase.value==='home'&&!mobile.value&&!intro.value&&!dragging.value&&performance.now()>=magnetReturnUntil&&location.pathname==='/';
   motions.forEach((m,key)=>{
     const next=enabled&&key===cursor.value;
     if(m.magnetEnabled&&!next)releaseMagnet(m,true);
@@ -80,7 +91,7 @@ function warm(project:Project){
   const src=source(project);if(!src||warmVideos.has(src))return;
   const video=document.createElement('video');video.muted=true;video.playsInline=true;video.preload='auto';video.src=src;video.load();warmVideos.set(src,video);
 }
-function syncVideos(){videos.forEach((video,key)=>{if(key===cursor.value)video.play().catch(()=>{});else video.pause();});}
+function syncVideos(){videos.forEach((video,key)=>{if(key===cursor.value&&routePhase.value!=='about')video.play().catch(()=>{});else video.pause();});}
 function ownerInStack(key:number|undefined){return key!==undefined&&stack.value.some(item=>item.key===key);}
 function bindVideoSlot(key:number,element:unknown){
   // Vue owns this stable empty slot; the native video can cross route trees.
@@ -103,21 +114,24 @@ function bindCard(key:number,element:unknown){
 }
 function sync(first=false,returning=false){
   if(!mounted.value)return;
+  const routeTween=returning||routePhase.value==='exiting-about'||routePhase.value==='returning-home';
+  const snap=routePhase.value==='about'||routeTween&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const seconds=mobile.value?.8:1.2;
   const keys=new Set(stack.value.map(item=>item.key));motions.forEach((_,key)=>{if(!keys.has(key))motions.delete(key);});
   videos.forEach((video,key)=>{if(!keys.has(key)){video.pause();video.remove();videos.delete(key);}});seen.add(cursor.value);
   stack.value.forEach(item=>{
-    const target=position(item.offset);let m=motions.get(item.key);
+    const target=routePosition(item.offset);let m=motions.get(item.key);
     if(!m){
-      const startY=intro.value?(item.offset<=0?-1:1)*height*.92:item.offset===0&&first?0:Math.sign(item.offset)*height*.6;
-      m={y:new MotionNumber(startY),rotate:new MotionNumber(item.offset===0&&intro.value?-(mobile.value?93:98):target.rotate),
-        scale:new MotionNumber(intro.value?(item.offset===0?.8:target.scale):1),opacity:new MotionNumber(item.offset===0&&!intro.value?1:0),
+      const startY=routePhase.value==='about'?target.y:intro.value?(item.offset<=0?-1:1)*height*.92:item.offset===0&&first?0:Math.sign(item.offset)*height*.6;
+      m={x:new MotionNumber(routePhase.value==='about'?target.x:0),y:new MotionNumber(startY),rotate:new MotionNumber(item.offset===0&&intro.value?-(mobile.value?93:98):target.rotate),
+        scale:new MotionNumber(routePhase.value==='about'?target.scale:intro.value?(item.offset===0?.8:target.scale):1),opacity:new MotionNumber(item.offset===0&&!intro.value?1:0),
         magnetX:new MotionNumber(0),magnetY:new MotionNumber(0),magnetEnabled:false,magnetInside:false};
       motions.set(item.key,m);
     }
     if(intro.value)return;
-    if(returning){const seconds=mobile.value&&document.documentElement.dataset.routeTransition==='about-home'?.8:1.2;m.y.tween(target.y,seconds);m.rotate.tween(target.rotate,seconds);m.scale.tween(target.scale,seconds);}
-    else {m.y.spring(target.y);m.rotate.spring(target.rotate);m.scale.spring(target.scale);}
-    m.opacity.tween(item.offset===0?1:0,.3,opacityEase);
+    if(snap){m.x.set(target.x);m.y.set(target.y);m.rotate.set(target.rotate);m.scale.set(target.scale);m.opacity.set(target.opacity);}
+    else if(routeTween){m.x.tween(target.x,seconds);m.y.tween(target.y,seconds);m.rotate.tween(target.rotate,seconds);m.scale.tween(target.scale,seconds);m.opacity.tween(target.opacity,.3,opacityEase);}
+    else {m.x.set(0);m.y.spring(target.y);m.rotate.spring(target.rotate);m.scale.spring(target.scale);m.opacity.tween(target.opacity,.3,opacityEase);}
   });
   if(props.projects[active.value])warm(props.projects[active.value]);
   syncMagnetEnabled();
@@ -136,11 +150,37 @@ function introStage(value:number){
   maskY.tween(0,.72);maskOpacity.tween(1,.24,opacityEase);animate();
 }
 function applyIntroSnapshot(snapshot:HomeIntroSnapshot){
+  if(routePhase.value!=='home'&&snapshot.playing)return;
   const wasPlaying=intro.value;intro.value=snapshot.playing;stage.value=snapshot.stage;
   if(snapshot.playing)introStage(snapshot.stage);
   else if(wasPlaying)sync();
   syncMagnetEnabled();
 }
+function setRoute(pathname:string){
+  if(!mounted.value)return;
+  const about=pathname==='/about'||pathname==='/about/';
+  if(!about&&pathname!=='/'&&pathname!=='')return;
+  const wasAbout=routePhase.value==='about'||routePhase.value==='exiting-about';
+  if(about===wasAbout)return;
+  clearTimeout(routeTimer);
+  routePhase.value=about?'exiting-about':'returning-home';
+  intro.value=false;stage.value=5;
+  pointer.id=null;pointer.dragging=false;pointer.captured=false;pointer.triggered=false;dragging.value=false;
+  const seconds=matchMedia('(prefers-reduced-motion: reduce)').matches?0:mobile.value?.8:1.2;
+  if(!about)holdReturnMagnet();
+  maskY.tween(0,seconds);maskOpacity.tween(1,seconds);
+  sync(false,true);
+  routeTimer=window.setTimeout(()=>{
+    routeTimer=0;
+    routePhase.value=about?'about':'home';
+    syncVideos();syncMagnetEnabled();
+  },seconds*1000+34);
+}
+function authorRoute(event:Event){
+  const pathname=(event as CustomEvent<{pathname?:string}>).detail?.pathname;
+  if(typeof pathname==='string')setRoute(pathname);
+}
+function pageLoad(){setRoute(location.pathname);}
 function advance(offset:number){
   if(allowed()&&props.projects.length&&offset!==0){
     if(performance.now()<magnetReturnUntil)holdReturnMagnet();
@@ -192,10 +232,12 @@ onMounted(()=>{
   const snapshot=getHomeIntroSnapshot();
   intro.value=controlled.value?props.playIntro!==false:snapshot.playing;
   stage.value=props.introStage??(intro.value?snapshot.stage:5);mounted.value=true;
+  if(location.pathname==='/about'||location.pathname==='/about/'){routePhase.value='about';intro.value=false;stage.value=5;}
   maskY.set(intro.value?height*.6:0);maskOpacity.set(intro.value?0:1);sync(true,returning);
   if(mobile.value)props.projects.forEach(warm);
   window.addEventListener('wheel',wheel,{passive:false});window.addEventListener('keydown',key);window.addEventListener('resize',resize);
   window.addEventListener('mousemove',magnetMove);document.documentElement.addEventListener('mouseleave',magnetLeave);
+  window.addEventListener('gabriel:author-route',authorRoute);document.addEventListener('astro:page-load',pageLoad);
   
   if(controlled.value){if(intro.value)introStage(stage.value);else animate();}
   else {unsubscribeIntro=subscribeHomeIntro(applyIntroSnapshot);ensureHomeIntro(props.projects);}
@@ -204,13 +246,14 @@ onUnmounted(()=>{
   mounted.value=false;unsubscribeIntro?.();cancelAnimationFrame(raf);timers.forEach(clearTimeout);
   window.removeEventListener('wheel',wheel);window.removeEventListener('keydown',key);window.removeEventListener('resize',resize);
   window.removeEventListener('mousemove',magnetMove);document.documentElement.removeEventListener('mouseleave',magnetLeave);
+  window.removeEventListener('gabriel:author-route',authorRoute);document.removeEventListener('astro:page-load',pageLoad);clearTimeout(routeTimer);
   
   motions.forEach(m=>{m.magnetX.stop();m.magnetY.stop();});
   videos.forEach(video=>{video.pause();video.remove();});warmVideos.forEach(video=>{video.pause();video.removeAttribute('src');video.load();});
 });
 </script>
 <template>
-  <section class="project-slider" aria-label="Project Slider" :data-intro-stage="stage" :data-intro-playing="intro">
+  <section class="project-slider" aria-label="Project Slider" :data-intro-stage="stage" :data-intro-playing="intro" :data-route-phase="routePhase" :aria-hidden="routePhase==='about'||routePhase==='exiting-about'">
     <div class="cards" :class="{dragging}" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @pointerleave="up">
       <div v-for="item in stack" :key="item.key" :ref="element=>bindCard(item.key,element)" class="project-card" :class="{current:item.offset===0}" :data-card-cursor="item.key" :data-card-offset="item.offset">
         <div class="card-magnet">
@@ -226,14 +269,13 @@ onUnmounted(()=>{
     <div ref="topMask" class="carousel-mask carousel-mask-top" aria-hidden="true" />
     <div ref="bottomMask" class="carousel-mask carousel-mask-bottom" aria-hidden="true" />
   </section>
-  <Teleport v-if="mounted" to="body">
-    <div class="project-dots carousel-dots" :class="{'intro-visible':stage>=5}" role="img" :aria-label="'Project '+(active+1)+' of '+props.projects.length">
+    <div v-if="mounted" class="project-dots carousel-dots" :class="{'intro-visible':stage>=5&&(routePhase==='home'||routePhase==='returning-home')}" role="img" :aria-label="'Project '+(active+1)+' of '+props.projects.length">
       <span v-for="(_,index) in props.projects" :key="index" :class="{active:index===props.projects.length-1-active}" />
     </div>
-  </Teleport>
 </template>
 <style scoped>
 .project-slider {animation:none!important;}
+.project-slider[data-route-phase="about"] {visibility:hidden;pointer-events:none;}
 .project-slider::before,.project-slider::after {display:none;}
 .cards {perspective:1500px;transform-style:preserve-3d;touch-action:manipulation;user-select:none;}
 .project-card {translate:0 -50%;transform-style:preserve-3d;transform-origin:center center;border-radius:32px;opacity:1;background:transparent;overflow:visible;animation:none!important;transition:none!important;filter:none!important;}

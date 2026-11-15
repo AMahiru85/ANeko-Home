@@ -1,6 +1,65 @@
-/* Routes own their geometric transitions; do not layer Astro's page fade on top. */
-.home-shell {animation:none!important;}
-::view-transition-group(root) {animation:none;}
-::view-transition-old(root),::view-transition-new(root) {animation:none;mix-blend-mode:normal;}
-html[data-route-transition="home-about"] *,html[data-route-transition="about-home"] * {view-transition-name:none!important;}
-html[data-route-transition="home-about"] .about-route {animation:none!important;}
+/* Initial home loading belongs to home-intro.ts; internal routes retain their scene. */
+.home-shell, .intro-heading, .intro-actions, .about-author-actions { animation: none !important; }
+::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+html[data-route-transition] * { view-transition-name: none !important; }
+
+.project-stage { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
+.project-stage .project-slider[data-route-phase="home"] { pointer-events: auto; }
+.author-actions { position: relative; display: flex; align-items: center; gap: .4rem; width: 11.2rem; height: 5.4rem; }
+.author-user-route { width: 5.4rem; height: 5.4rem; flex: 0 0 5.4rem; transition: transform .45s cubic-bezier(.215,.61,.355,1), opacity .25s cubic-bezier(.215,.61,.355,1); }
+html[data-author-route="about"] .author-user-route { transform: translateX(-.8rem) scale(.92); opacity: 0; pointer-events: none; }
+.home-about-slot { width: 5.4rem; height: 5.4rem; }
+.home-about-icon-mask { position: relative; display: block; width: 2rem; height: 2rem; overflow: hidden; }
+[data-home-about-icon] { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+html[data-route-transition="home-about"] .about-globe-slot { animation: route-globe-in var(--route-transition-duration, 1200ms) cubic-bezier(.32,0,0,1) both; }
+@keyframes route-globe-in { from { opacity: 0; scale: .9; } to { opacity: 1; scale: 1; } }
+
+/* Keep the persisted globe visible while the About page leaves, then fade it
+   out smoothly instead of moving the hidden preloader away in one frame. */
+html[data-route-transition="about-home"] .travel-preload {
+  position: fixed !important;
+  left: auto !important;
+  right: 10rem !important;
+  top: 50% !important;
+  width: 40rem !important;
+  height: 40rem !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+  transform: translateY(-50%) !important;
+  animation: route-globe-out .6s ease-out both !important;
+}
+html[data-route-transition="about-home"] .about-globe-slot {
+  z-index: 10 !important;
+  animation: route-globe-out .6s ease-out both !important;
+}
+html[data-route-transition="about-home"] .travel-preload .travel-globe {
+  width: 100% !important;
+  height: 100% !important;
+}
+html[data-route-globe-hidden="true"] .travel-preload {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+@keyframes route-globe-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+  html[data-route-transition="about-home"] .travel-preload {
+    left: 50% !important;
+    right: auto !important;
+    width: min(40rem, calc(100vw - 3.2rem)) !important;
+    height: min(40rem, calc(100vw - 3.2rem)) !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .author-user-route { transition: none; }
+  html[data-route-transition="home-about"] .about-globe-slot { animation: none; }
+  html[data-route-transition="about-home"] .travel-preload {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
