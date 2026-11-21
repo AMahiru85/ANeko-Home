@@ -3,6 +3,8 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import type { Project } from '../data/projects';
 import { CARD_MAGNET, cardMagneticTarget, MotionNumber, opacityEase } from '../lib/carousel-motion';
 import { ensureHomeIntro, getHomeIntroSnapshot, subscribeHomeIntro, type HomeIntroSnapshot } from '../lib/home-intro';
+import { useLanguage } from '../lib/language';
+const { language, t } = useLanguage();
 const props=withDefaults(defineProps<{projects:Project[];introStage?:number;playIntro?:boolean}>(),{playIntro:undefined});
 const sharedIntro=getHomeIntroSnapshot();
 const controlled=computed(()=>props.introStage!==undefined||props.playIntro!==undefined);
@@ -16,6 +18,7 @@ const stack=computed(()=>props.projects.length?Array.from({length:7},(_,i)=>{
 }):[]);
 type Motion={x:MotionNumber;y:MotionNumber;rotate:MotionNumber;scale:MotionNumber;opacity:MotionNumber;magnetX:MotionNumber;magnetY:MotionNumber;magnetEnabled:boolean;magnetInside:boolean;node?:HTMLElement;magnetNode?:HTMLElement};
 const motions=new Map<number,Motion>(),videos=new Map<number,HTMLVideoElement>(),warmVideos=new Map<string,HTMLVideoElement>();
+watch(language,()=>videos.forEach((video,key)=>video.setAttribute('aria-label',props.projects[modulo(key,props.projects.length)].title+' '+t('preview'))));
 const timers=new Set<number>(),topMask=ref<HTMLElement>(),bottomMask=ref<HTMLElement>();
 const maskY=new MotionNumber(0),maskOpacity=new MotionNumber(1);
 let height=0,raf=0,lastTime=0,wheelUntil=0,repeatAt=0,dragAt=0,suppressClick=false;
@@ -104,7 +107,7 @@ function bindVideoSlot(key:number,element:unknown){
   const fresh=!videos.has(key);
   if(!video){video=document.createElement('video');video.src=src;video.muted=true;video.loop=true;video.playsInline=true;video.preload='auto';}
   else if(new URL(video.currentSrc||video.src,location.href).href!==new URL(src,location.href).href){video.src=src;video.load();}
-  video.setAttribute('aria-label',project.title+' preview');
+  video.setAttribute('aria-label',project.title+' '+t('preview'));
   videos.set(key,video);if(video.parentElement!==element)element.appendChild(video);
   
   syncVideos();
@@ -181,15 +184,24 @@ function authorRoute(event:Event){
   if(typeof pathname==='string')setRoute(pathname);
 }
 function pageLoad(){setRoute(location.pathname);}
-function advance(offset:number){
+function advance(offset:number, fromDrag=false){
   if(allowed()&&props.projects.length&&offset!==0){
     if(performance.now()<magnetReturnUntil)holdReturnMagnet();
-    cursor.value+=offset;
+    const nextCursor = cursor.value + offset;
+    if (fromDrag) {
+      // Switch the visible preview before the cards move past each other.
+      motions.forEach((motion, key) => {
+        if (key !== nextCursor) motion.opacity.set(0);
+      });
+    }
+    cursor.value = nextCursor;
     window.dispatchEvent(new CustomEvent('gabriel:carousel-cursor',{detail:{cursor:cursor.value}}));
   }
 }
 function triggerDrag(dy:number){
-  const now=performance.now();if(now-dragAt<170)return;advance(dy>0?-1:1);
+  const now = performance.now();
+  if (now - dragAt < 170) return;
+  advance(dy > 0 ? -1 : 1, true);
   pointer.triggered=true;suppressClick=true;dragAt=now;
 }
 function down(e:PointerEvent){
@@ -253,7 +265,7 @@ onUnmounted(()=>{
 });
 </script>
 <template>
-  <section class="project-slider" aria-label="Project Slider" :data-intro-stage="stage" :data-intro-playing="intro" :data-route-phase="routePhase" :aria-hidden="routePhase==='about'||routePhase==='exiting-about'">
+  <section class="project-slider" :aria-label="t('Project Slider')" :data-intro-stage="stage" :data-intro-playing="intro" :data-route-phase="routePhase" :aria-hidden="routePhase==='about'||routePhase==='exiting-about'">
     <div class="cards" :class="{dragging}" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @pointerleave="up">
       <div v-for="item in stack" :key="item.key" :ref="element=>bindCard(item.key,element)" class="project-card" :class="{current:item.offset===0}" :data-card-cursor="item.key" :data-card-offset="item.offset">
         <div class="card-magnet">
@@ -269,7 +281,7 @@ onUnmounted(()=>{
     <div ref="topMask" class="carousel-mask carousel-mask-top" aria-hidden="true" />
     <div ref="bottomMask" class="carousel-mask carousel-mask-bottom" aria-hidden="true" />
   </section>
-    <div v-if="mounted" class="project-dots carousel-dots" :class="{'intro-visible':stage>=5&&(routePhase==='home'||routePhase==='returning-home')}" role="img" :aria-label="'Project '+(active+1)+' of '+props.projects.length">
+    <div v-if="mounted" class="project-dots carousel-dots" :class="{'intro-visible':stage>=5&&(routePhase==='home'||routePhase==='returning-home')}" role="img" :aria-label="t('Project')+' '+(active+1)+' '+t('of')+' '+props.projects.length">
       <span v-for="(_,index) in props.projects" :key="index" :class="{active:index===props.projects.length-1-active}" />
     </div>
 </template>

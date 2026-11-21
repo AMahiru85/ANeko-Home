@@ -5,6 +5,8 @@ import ButtonMagnet from './ButtonMagnet.vue';
 import { BUTTON_ROTATE_SPRING, EASE_IN_OUT_CIRC, EASE_OUT_CUBIC, useButtonMotion } from '../lib/button-motion';
 import { subscribeHomeIntro } from '../lib/home-intro';
 import { navigate } from 'astro:transitions/client';
+import { useLanguage } from '../lib/language';
+const { t } = useLanguage();
 
 const props=withDefaults(defineProps<{about?:boolean}>(),{about:false});
 const about=ref(props.about);
@@ -25,7 +27,7 @@ const toggleSurfaceStyle=ref(props.about?'background-color:#000;border-radius:2.
 const email='gbeaugonin@gmail.com';
 const itemMotion=[0,1,2].map(()=>({x:useButtonMotion(props.about?0:-10),rotate:useButtonMotion(props.about?0:80),scale:useButtonMotion(props.about?1:.8),opacity:useButtonMotion(props.about?1:0),blur:useButtonMotion(props.about?0:2)}));
 const contacts=computed(()=>[
-  {name:mobile.value?'Send email':'Copy email',icon:'email' as const,href:'mailto:'+email},
+  {name:t(mobile.value?'Send email':'Copy email'),icon:'email' as const,href:'mailto:'+email},
   {name:'X (Twitter)',icon:'x' as const,href:'https://x.com/gabrielbgnn'},
   {name:'LinkedIn',icon:'linkedin' as const,href:'https://www.linkedin.com/in/gbeaugonin/'},
 ]);
@@ -196,7 +198,7 @@ const copyEmail=async()=>{
       copied=document.execCommand('copy');textarea.remove();
     }
   }catch{}
-  toast.value=copied?'copied to clipboard':'copy unavailable — '+email;
+  toast.value=copied?t('copied to clipboard'):t('copy unavailable — ')+email;
   clearTimeout(toastTimer);toastTimer=window.setTimeout(()=>{toast.value='';},4000);
 };
 const refreshParent=()=>{
@@ -271,7 +273,7 @@ onUnmounted(()=>{
     <div ref="toggleRoute" class="source-social-toggle-route" :style="initialToggleRouteStyle">
     <div ref="introElement" class="source-social-intro" :style="{opacity:introOpacity,transform:'translateY('+introY+'px)'}">
       <ButtonMagnet>
-        <button ref="toggleButton" class="social-button source-social-toggle" :class="{'source-social-open':open||about}" type="button" :style="[toggleSurfaceStyle,{transform:'rotate('+rotate.value.value+'deg)'}]" :aria-expanded="about?undefined:open" :aria-label="about?'Back to Home':open?'Close Social Links':'Open Social Links'" @click="toggle">
+        <button ref="toggleButton" class="social-button source-social-toggle" :class="{'source-social-open':open||about}" type="button" :style="[toggleSurfaceStyle,{transform:'rotate('+rotate.value.value+'deg)'}]" :aria-expanded="about?undefined:open" :aria-label="t(about?'Back to Home':open?'Close Social Links':'Open Social Links')" @click="toggle">
           <span class="source-social-icon-mask" aria-hidden="true">
             <span ref="chatIcon" data-icon="chat" class="source-social-toggle-icon" :style="initialChatStyle"><ButtonIcon name="chat" color="#1a1a1a" /></span>
             <span ref="closeIcon" data-icon="close" class="source-social-toggle-icon" style="transform:scale(.5);opacity:0"><ButtonIcon name="close" color="#fff" /></span>
@@ -286,7 +288,7 @@ onUnmounted(()=>{
         <ButtonMagnet>
           <button v-if="contact.icon==='email'&&!mobile" class="social-button source-contact" type="button" :style="itemStyle(index)" :aria-label="contact.name" :tabindex="open?0:-1" @mouseenter="emailHover=true" @mouseleave="emailHover=false" @click="copyEmail"><ButtonIcon name="email" /></button>
           <a v-else class="social-button source-contact" :style="itemStyle(index)" :href="contact.href" :aria-label="contact.name" :tabindex="open?0:-1" :target="contact.icon==='email'?undefined:'_blank'" :rel="contact.icon==='email'?undefined:'noreferrer'"><ButtonIcon :name="contact.icon" /></a>
-          <span v-if="contact.icon==='email'&&!mobile" class="source-email-tooltip" :class="{'source-email-tooltip-visible':emailHover}">click to copy</span>
+          <span v-if="contact.icon==='email'&&!mobile" class="source-email-tooltip" :class="{'source-email-tooltip-visible':emailHover}">{{ t('click to copy') }}</span>
         </ButtonMagnet>
       </div>
     <Teleport v-if="toast" to="body"><div class="source-copy-toast" role="status">{{toast}}</div></Teleport>

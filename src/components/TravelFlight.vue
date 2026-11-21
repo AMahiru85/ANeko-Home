@@ -2,6 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { navigate } from 'astro:transitions/client';
 import { startTravelFlight } from '../lib/travel-flight-scene';
+import { useLanguage } from '../lib/language';
+const { t } = useLanguage();
 const root = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), trails = ref<HTMLCanvasElement>();
 const country = ref('Bangkok'), failed = ref(false), leaving = ref(false);
 let stop = () => {}, transition: Animation | undefined, removeEvents = () => {};
@@ -33,12 +35,12 @@ onMounted(() => {
 onUnmounted(() => { stop(); transition?.cancel(); removeEvents(); });
 </script>
 <template>
-  <main ref="root" class="travel-flight" aria-label="Interactive travel gallery" :aria-busy="leaving" data-travel-flight>
-    <canvas ref="canvas" class="flight-canvas" aria-label="Fly through travel photographs" />
+  <main ref="root" class="travel-flight" :aria-label="t('Interactive travel gallery')" :aria-busy="leaving" data-travel-flight>
+    <canvas ref="canvas" class="flight-canvas" :aria-label="t('Fly through travel photographs')" />
     <canvas ref="trails" class="flight-trails" aria-hidden="true" />
-    <p v-if="failed" class="flight-fallback" role="status">The travel gallery couldn't load. Please try again.</p>
-    <button class="flight-return" type="button" aria-label="Return to the about page" :disabled="leaving" @click="returnToAbout">
-      <span class="sr-only">{{ country }}</span><span class="flight-return-caption">Click to return</span>
+    <p v-if="failed" class="flight-fallback" role="status">{{ t("The travel gallery couldn't load. Please try again.") }}</p>
+    <button class="flight-return" type="button" :aria-label="t('Return to the about page')" :disabled="leaving" @click="returnToAbout">
+      <span class="sr-only">{{ country }}</span><span class="flight-return-caption">{{ t('Click to return') }}</span>
     </button>
   </main>
 </template>

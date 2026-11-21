@@ -6,6 +6,7 @@ const originalNodes = new WeakMap<HTMLElement, Node[]>();
 
 export function setupAboutReveals(root: HTMLElement) {
   let disposed = false;
+  let initialized = false;
   let resizeFrame = 0;
   const states = [...root.querySelectorAll<HTMLElement>('[data-about-rich-text]')].map((element): BlockState => ({
     element, original: originalNodes.get(element) ?? [...element.childNodes].map((node) => node.cloneNode(true)), played: false, tracks: [], animations: [], timer: 0,
@@ -51,7 +52,11 @@ export function setupAboutReveals(root: HTMLElement) {
         pieces.push({ kind: 'node', node: part });
         return;
       }
-      (part.textContent ?? '').split(/(\n+|[^\S\n]+)/).filter(Boolean).forEach((token) => {
+      const text = part.textContent ?? '';
+      const tokens = document.documentElement.lang === 'zh-CN'
+        ? [...new Intl.Segmenter('zh-CN', { granularity: 'word' }).segment(text)].map(segment => segment.segment)
+        : text.split(/(\n+|[^\S\n]+)/).filter(Boolean);
+      tokens.forEach((token) => {
         if (/^\n+$/.test(token)) {
           pieces.push({ kind: 'break', blankLines: Math.max(0, token.length - 1) });
           for (let index = 0; index < token.length; index++) measure.append(document.createElement('br'));
@@ -109,12 +114,23 @@ export function setupAboutReveals(root: HTMLElement) {
     await document.fonts.ready;
     if (disposed || reduced.matches) return;
     states.forEach((state) => split(state, true));
+    initialized = true;
+  };
+  const languageChanged = () => {
+    if (disposed) return;
+    states.forEach(state => {
+      window.clearTimeout(state.timer);
+      state.original = [...state.element.childNodes].map(node => node.cloneNode(true));
+      originalNodes.set(state.element, state.original);
+      if (initialized && !reduced.matches) split(state, false);
+    });
   };
   const resize = () => {
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(() => { if (!disposed && !reduced.matches) states.forEach((state) => split(state, false)); });
   };
   window.addEventListener('resize', resize);
+  window.addEventListener('gabriel:language', languageChanged);
   ready();
   return () => {
     if (disposed) return;
@@ -122,6 +138,7 @@ export function setupAboutReveals(root: HTMLElement) {
     observer.disconnect();
     cancelAnimationFrame(resizeFrame);
     window.removeEventListener('resize', resize);
+    window.removeEventListener('gabriel:language', languageChanged);
     states.forEach((state) => {
       window.clearTimeout(state.timer);
       // The outgoing page remains visible during its route fade. Keep each

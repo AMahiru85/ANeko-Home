@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import '../styles/route-motion.css';
 import { ClientRouter } from 'astro:transitions';
+import LanguagePicker from '../components/LanguagePicker.vue';
 
 interface Props {
   title?: string;
@@ -26,9 +27,12 @@ const canonical = new URL(Astro.url.pathname, 'https://www.gabrielbeaugonin.com'
     <title>{title}</title>
   </head>
   <body>
+    <LanguagePicker client:load transition:persist="language-picker" />
     <slot />
     <script>
       import { installRouteMotion } from '../lib/route-motion';
+      import { installLanguage } from '../lib/language';
+      installLanguage();
       installRouteMotion();
     </script>
   </body>

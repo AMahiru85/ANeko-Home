@@ -3,6 +3,8 @@ const flight = { angle: 0, time: 0, bank: 0, rotation: 2.2 };
 </script>
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useLanguage } from '../lib/language';
+const { t } = useLanguage();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const ready = ref(false);
@@ -127,7 +129,7 @@ onUnmounted(() => { disposed = true; cleanup(); });
 </script>
 
 <template>
-  <canvas ref="canvas" class="travel-globe" data-webgl-scene="travel-globe" :data-plane-ready="ready" aria-label="Rotating globe with an orbiting airplane" />
+  <canvas ref="canvas" class="travel-globe" data-webgl-scene="travel-globe" :data-plane-ready="ready" :aria-label="t('Rotating globe with an orbiting airplane')" />
 </template>
 <style scoped>
 .travel-globe { opacity: 1; scale: 1; transition: opacity .7s cubic-bezier(.22,1,.36,1), scale .7s cubic-bezier(.22,1,.36,1); }

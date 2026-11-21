@@ -15,7 +15,7 @@ const recognitions = [['The Webby Awards', '(1)'], ['Awwwards', '(13)'], ['IDEA'
     <AuthorHeading />
     <div class="about-author-actions" data-about-header-anchor><AuthorActions /></div>
   </header>
-  <main class="about-route" data-about-page aria-label="About Gabriel Beaugonin">
+  <main class="about-route" data-about-page aria-label="About Gabriel Beaugonin" data-i18n-label="About Gabriel Beaugonin">
     <div class="about-content-position">
       <section class="about-content">
         <div class="about-paragraphs">
@@ -52,8 +52,8 @@ const recognitions = [['The Webby Awards', '(1)'], ['Awwwards', '(13)'], ['IDEA'
         ]} />
       </section>
     </div>
-    <a class="about-globe-slot" href="/travel" aria-label="Open the travel gallery" data-about-globe>
-      <TravelGlobe client:load transition:persist="travel-globe" /><span>Click to travel</span>
+    <a class="about-globe-slot" href="/travel" aria-label="Open the travel gallery" data-i18n-label="Open the travel gallery" data-about-globe>
+      <TravelGlobe client:load transition:persist="travel-globe" /><span data-i18n="Click to travel">Click to travel</span>
     </a>
     <div class="about-bottom-fade" aria-hidden="true"></div>
   </main>

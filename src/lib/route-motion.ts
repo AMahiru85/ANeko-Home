@@ -48,7 +48,7 @@ export function installRouteMotion() {
       document.documentElement.dataset.routeTransition = direction;
       document.documentElement.style.setProperty('--route-transition-duration', duration() + 'ms');
     }
-    if (direction === 'about-home') aboutExit = startAboutExit(() => {
+    if (direction === 'about-home') aboutExit = startAboutExit(duration(), () => {
       if (current !== generation) return;
       aboutExit = undefined; clearTransition();
     });

@@ -8,7 +8,7 @@ const about = Astro.url.pathname === '/about' || Astro.url.pathname === '/about/
   <div class="author-user-route">
     <div class="home-about-slot" data-home-about-enter>
       <ButtonMagnet client:load>
-        <a class="about-button" href="/about" aria-label="Open About Page" data-home-about-link>
+        <a class="about-button" href="/about" aria-label="Open About Page" data-i18n-label="Open About Page" data-home-about-link>
           <span class="home-about-icon-mask"><span data-home-about-icon><ButtonIcon name="user" /></span></span>
         </a>
       </ButtonMagnet>

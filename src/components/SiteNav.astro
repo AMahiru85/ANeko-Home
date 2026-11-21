@@ -6,8 +6,8 @@ const links = [
 ];
 ---
 
-<nav class="sr-only" aria-label="Site">
+<nav class="sr-only" aria-label="Site" data-i18n-label="Site">
   <ul>
-    {links.map(([label, href]) => <li><a href={href}>{label}</a></li>)}
+    {links.map(([label, href]) => <li><a href={href} data-i18n={label}>{label}</a></li>)}
   </ul>
 </nav>

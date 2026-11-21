@@ -29,9 +29,15 @@ const aboutStyles = () => [...document.head.querySelectorAll<StyleNode>('style,l
   return /\.about-(?:route|content|rich-text|bottom-fade|globe-slot)\b/.test(css);
 });
 
+// Match the desktop return's exponential scroll easing after Astro resets scroll.
+const scrollReturnFrames = Array.from({ length: 31 }, (_, index) => {
+  const offset = index / 30;
+  return { offset, remaining: index === 0 ? 1 : Math.max(0, 2 ** (-10 * offset) - .001) };
+});
+
 // Text belongs to the outgoing page; the persisted globe has its own, longer
 // visibility track. Keep their opacity independent across Astro's body swap.
-export function startAboutExit(onComplete: () => void): AboutExit {
+export function startAboutExit(returnDuration: number, onComplete: () => void): AboutExit {
   const main = document.querySelector<HTMLElement>('[data-about-page]');
   const slot = document.querySelector<HTMLElement>('[data-about-globe]');
   const canvas = slot?.querySelector<HTMLCanvasElement>('.travel-globe');
@@ -51,6 +57,10 @@ export function startAboutExit(onComplete: () => void): AboutExit {
   const retained: { original: StyleNode; clone: StyleNode }[] = [];
   let mainRect = main?.getBoundingClientRect();
   let mainAnimation: Animation | undefined, globeAnimation: Animation | undefined;
+  let mainScroll: Animation | undefined, headerScroll: Animation | undefined;
+  let scrollOffset = 0;
+  let headerSettled = true;
+  let globePlaceholder: HTMLDivElement | undefined;
   let preload: HTMLElement | null = null, preloadInline: string | null = null;
   let swapped = false, stopped = false, mainDone = !main, globeDone = !canvas;
   let mainRemoved = false, globeRemoved = false;
@@ -58,7 +68,7 @@ export function startAboutExit(onComplete: () => void): AboutExit {
   const finish = () => {
     if (stopped || !swapped) return;
     if (mainDone && !mainRemoved) {
-      mainRemoved = true; main?.remove(); mainAnimation?.cancel();
+      mainRemoved = true; main?.remove(); mainAnimation?.cancel(); mainScroll?.cancel();
       retained.forEach(({ original, clone }) => { original.remove(); clone.remove(); });
     }
     if (globeDone && !globeRemoved) {
@@ -71,10 +81,18 @@ export function startAboutExit(onComplete: () => void): AboutExit {
       if (canvas) restoreInline(canvas, canvasInline);
       globeAnimation?.cancel();
     }
-    if (mainDone && globeDone) { stopped = true; onComplete(); }
+    if (mainDone && globeDone && headerSettled) { stopped = true; onComplete(); }
   };
 
   if (slot && globeRect) {
+    if (!desktop) {
+      // Keep the globe's space until swap so removing it cannot cut the mobile
+      // scroll range short and shift the outgoing text.
+      const { height, marginTop, marginBottom } = getComputedStyle(slot);
+      globePlaceholder = document.createElement('div');
+      Object.assign(globePlaceholder.style, { height, marginTop, marginBottom });
+      slot.before(globePlaceholder);
+    }
     freezeRect(slot, globeRect);
     slot.style.animation = 'none';
     move(document.body, slot);
@@ -104,7 +122,10 @@ export function startAboutExit(onComplete: () => void): AboutExit {
   return {
     prepareSwap(next) {
       if (stopped) return;
-      mainRect = main?.getBoundingClientRect();
+      if (desktop) {
+        mainRect = main?.getBoundingClientRect();
+        if (!reduced) scrollOffset = Math.max(0, scrollY);
+      }
       if (mainDone) return;
       // Retain the original Vite nodes instead of inserting duplicate HMR ids.
       styles.filter(node => !hasStyle(next, node)).forEach(original => {
@@ -115,6 +136,7 @@ export function startAboutExit(onComplete: () => void): AboutExit {
     afterSwap() {
       if (stopped) return;
       swapped = true;
+      globePlaceholder?.remove();
       preload = document.querySelector<HTMLElement>('.travel-preload');
       if (!globeDone && preload && globeRect) {
         preloadInline = preload.getAttribute('style');
@@ -129,11 +151,33 @@ export function startAboutExit(onComplete: () => void): AboutExit {
         main.querySelector('[data-about-globe]')?.remove();
         document.body.append(main);
       }
+      if (scrollOffset > 0) {
+        const header = document.querySelector('[data-home-header]');
+        if (header) {
+          headerSettled = false;
+          headerScroll = header.animate(scrollReturnFrames.map(({ offset, remaining }) => ({
+            offset,
+            translate: '0 ' + (-scrollOffset * remaining) + 'px',
+          })), returnDuration);
+          void headerScroll.finished.then(() => {
+            headerSettled = true;
+            finish();
+          }).catch(() => {});
+        }
+        if (!mainDone && main && mainRect) {
+          const settledTop = mainRect.top + scrollOffset;
+          mainScroll = main.animate(scrollReturnFrames.map(({ offset, remaining }) => ({
+            offset,
+            top: (settledTop - scrollOffset * remaining) + 'px',
+          })), returnDuration);
+        }
+      }
       finish();
     },
     cancel() {
       if (stopped) return;
       stopped = true; mainAnimation?.cancel(); globeAnimation?.cancel();
+      mainScroll?.cancel(); headerScroll?.cancel();
       retained.forEach(({ original, clone }) => { if (swapped) original.remove(); clone.remove(); });
       if (swapped) {
         main?.remove(); slot?.remove();
@@ -153,6 +197,7 @@ export function startAboutExit(onComplete: () => void): AboutExit {
         }
         if (caption) restoreInline(caption, captionDisplay);
       }
+      globePlaceholder?.remove();
       if (canvas) restoreInline(canvas, canvasInline);
     },
   };

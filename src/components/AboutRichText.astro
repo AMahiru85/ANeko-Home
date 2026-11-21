@@ -3,7 +3,7 @@ interface Piece { text: string; ink?: boolean; href?: string }
 interface Props { as?: 'p' | 'h4' | 'li'; content: Piece[]; delay?: number }
 const { as: Tag = 'p', content, delay = 0 } = Astro.props;
 ---
-<Tag class="about-rich-text" data-about-rich-text data-base-delay={delay}>
+<Tag class="about-rich-text" data-about-rich-text data-base-delay={delay} data-language-content={JSON.stringify(content)} data-language-rendered="en">
   {content.map((part) => part.href
     ? <a href={part.href} target="_blank" rel="noopener noreferrer" class:list={[part.ink && 'about-ink', 'about-rich-link']} data-about-part>{part.text}</a>
     : <span class:list={[part.ink && 'about-ink']} data-about-part>{part.text}</span>)}
