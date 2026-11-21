@@ -117,10 +117,18 @@ export function setupAboutReveals(root: HTMLElement) {
   window.addEventListener('resize', resize);
   ready();
   return () => {
+    if (disposed) return;
     disposed = true;
     observer.disconnect();
     cancelAnimationFrame(resizeFrame);
     window.removeEventListener('resize', resize);
-    states.forEach((state) => { window.clearTimeout(state.timer); state.animations.forEach((animation) => animation.cancel()); });
+    states.forEach((state) => {
+      window.clearTimeout(state.timer);
+      // The outgoing page remains visible during its route fade. Keep each
+      // line at its current position when its entrance animation is cancelled.
+      const transforms = state.tracks.map((track) => getComputedStyle(track).transform);
+      state.animations.forEach((animation) => animation.cancel());
+      state.tracks.forEach((track, index) => { track.style.transform = transforms[index] || ''; });
+    });
   };
 }

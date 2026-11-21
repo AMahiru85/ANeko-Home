@@ -43,7 +43,8 @@ onMounted(async () => {
   const position = new THREE.Vector3(), tangent = new THREE.Vector3(), normal = new THREE.Vector3(), up = new THREE.Vector3(), side = new THREE.Vector3(), target = new THREE.Vector3();
   const look = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), bankQuaternion = new THREE.Quaternion();
   let frame = 0, previous = performance.now(), elapsed = flight.time, angle = flight.angle, bank = flight.bank;
-  let boost = 0, kick = 0, active = true, intersecting = true, lastScroll = window.scrollY;
+  let boost = 0, kick = 0, active = false, intersecting = true, lastScroll = window.scrollY;
+  let routeVisible = location.pathname === '/about' || location.pathname === '/about/';
   const mouse = { x: 0, y: 0 }, magnet = { x: 0, y: 0, vx: 0, vy: 0 };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = matchMedia('(max-width: 768px)').matches;
@@ -87,9 +88,15 @@ onMounted(async () => {
     if (active && !disposed) frame = requestAnimationFrame(animate);
   };
   const syncActive = () => {
-    active = intersecting && !document.hidden; host.dataset.webglActive = String(active);
+    active = routeVisible && intersecting && !document.hidden; host.dataset.webglActive = String(active);
     if (active && !frame) { previous = performance.now(); frame = requestAnimationFrame(animate); }
     else if (!active && frame) { cancelAnimationFrame(frame); frame = 0; boost = 0; kick = 0; leave(); }
+  };
+  const route = (event: Event) => {
+    const pathname = (event as CustomEvent<{ pathname?: string }>).detail?.pathname;
+    if (typeof pathname !== 'string') return;
+    routeVisible = pathname === '/about' || pathname === '/about/';
+    syncActive();
   };
   const observer = new IntersectionObserver(entries => { intersecting = entries[0]?.isIntersecting ?? false; syncActive(); });
   const resizeObserver = new ResizeObserver(resize);
@@ -107,10 +114,12 @@ onMounted(async () => {
   }, undefined, () => { if (!disposed) host.dataset.planeError = 'load-failed'; });
   resize(); placePlane(); observer.observe(host); resizeObserver.observe(host); syncActive();
   window.addEventListener('wheel', wheel, { passive: true }); window.addEventListener('scroll', scroll, { passive: true }); window.addEventListener('mousemove', pointer);
+  window.addEventListener('gabriel:author-route', route);
   document.documentElement.addEventListener('mouseleave', leave); document.addEventListener('visibilitychange', syncActive);
   cleanup = () => {
     cancelAnimationFrame(frame); observer.disconnect(); resizeObserver.disconnect(); window.removeEventListener('wheel', wheel); window.removeEventListener('scroll', scroll); window.removeEventListener('mousemove', pointer);
     document.documentElement.removeEventListener('mouseleave', leave); document.removeEventListener('visibilitychange', syncActive);
+    window.removeEventListener('gabriel:author-route', route);
     geometries.forEach(geometry => geometry.dispose()); planeMaterial.dispose(); globe.geometry.dispose(); globe.material.dispose(); dots.geometry.dispose(); dots.material.dispose(); occluder.geometry.dispose(); occluder.material.dispose(); shadow.geometry.dispose(); shadowMaterial.dispose(); scene.clear(); renderer.dispose(); host.style.removeProperty('translate');
   };
 });

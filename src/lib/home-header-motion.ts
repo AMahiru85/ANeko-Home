@@ -55,7 +55,7 @@ export function bindHomeHeader(root: HTMLElement) {
     // Opacity and y use distinct nested owners so one animation cannot cancel the other.
     about.style.opacity = showActions ? '1' : '0';
     about.style.transition = reduced ? 'none' : 'opacity .72s ' + easing;
-    motion(icon, 'transform', showActions ? 'translateY(0%)' : 'translateY(-135%)', mobile() ? 800 : 1200);
+    motion(icon, 'transform', showActions ? 'translateY(0%)' : 'translateY(-135%)', playing ? (mobile() ? 800 : 1200) : 0);
     if (link) { link.tabIndex = showActions ? 0 : -1; link.style.pointerEvents = showActions ? 'auto' : 'none'; }
     root.dataset.homeHeaderStage = String(snapshot.stage);
     root.dataset.homeHeaderPlaying = String(playing);

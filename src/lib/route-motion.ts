@@ -1,8 +1,12 @@
+import { startAboutExit, type AboutExit } from './about-exit';
+
 let installed = false;
 let previousPath = '';
 let cleanupTimer = 0;
-let globeHideTimer = 0;
 let generation = 0;
+let aboutExit: AboutExit | undefined;
+type PreparationEvent = Event & { from?: URL; to?: URL; signal?: AbortSignal };
+type SwapEvent = Event & { newDocument?: Document; swap?: () => void };
 
 type Direction = 'home-about' | 'about-home';
 const isAbout = (path: string) => path === '/about' || path === '/about/';
@@ -21,9 +25,7 @@ function syncAuthor(path: string) {
 
 function clearTransition() {
   clearTimeout(cleanupTimer);
-  clearTimeout(globeHideTimer);
   delete document.documentElement.dataset.routeTransition;
-  delete document.documentElement.dataset.routeGlobeHidden;
   document.documentElement.style.removeProperty('--route-transition-duration');
 }
 
@@ -34,21 +36,33 @@ export function installRouteMotion() {
   syncAuthor(previousPath);
 
   document.addEventListener('astro:before-preparation', event => {
-    const to = (event as Event & { to?: URL }).to;
+    const { to, from, signal } = event as PreparationEvent;
     if (!to) return;
-    generation++;
+    const current = ++generation;
+    aboutExit?.cancel(); aboutExit = undefined;
     clearTransition();
-    const direction: Direction | undefined = previousPath === '/' && isAbout(to.pathname)
-      ? 'home-about' : isAbout(previousPath) && to.pathname === '/' ? 'about-home' : undefined;
+    const origin = from?.pathname ?? previousPath;
+    const direction: Direction | undefined = origin === '/' && isAbout(to.pathname)
+      ? 'home-about' : isAbout(origin) && to.pathname === '/' ? 'about-home' : undefined;
     if (direction) {
       document.documentElement.dataset.routeTransition = direction;
       document.documentElement.style.setProperty('--route-transition-duration', duration() + 'ms');
     }
+    if (direction === 'about-home') aboutExit = startAboutExit(() => {
+      if (current !== generation) return;
+      aboutExit = undefined; clearTransition();
+    });
+    signal?.addEventListener('abort', () => {
+      if (current !== generation) return;
+      aboutExit?.cancel(); aboutExit = undefined; clearTransition();
+      syncAuthor(location.pathname);
+    }, { once: true });
     syncAuthor(to.pathname);
   });
 
   document.addEventListener('astro:before-swap', event => {
-    const next = (event as Event & { newDocument?: Document; to?: URL }).newDocument;
+    const swapEvent = event as SwapEvent;
+    const next = swapEvent.newDocument;
     if (!next) return;
     const direction = document.documentElement.dataset.routeTransition;
     if (direction) {
@@ -56,6 +70,15 @@ export function installRouteMotion() {
       next.documentElement.style.setProperty('--route-transition-duration', duration() + 'ms');
     }
     next.documentElement.dataset.authorRoute = next.querySelector('[data-about-page]') ? 'about' : 'home';
+    if (aboutExit && swapEvent.swap) {
+      const exit = aboutExit, current = generation, swap = swapEvent.swap;
+      exit.prepareSwap(next);
+      // Astro invokes swap synchronously and does not await an async override.
+      swapEvent.swap = () => {
+        swap();
+        if (current === generation) exit.afterSwap();
+      };
+    }
   });
 
   document.addEventListener('astro:page-load', () => {
@@ -63,13 +86,7 @@ export function installRouteMotion() {
     syncAuthor(previousPath);
     const current = generation;
     const direction = document.documentElement.dataset.routeTransition;
-    delete document.documentElement.dataset.routeGlobeHidden;
-    clearTimeout(globeHideTimer);
-    if (direction === 'about-home') {
-      globeHideTimer = window.setTimeout(() => {
-        if (current === generation) document.documentElement.dataset.routeGlobeHidden = 'true';
-      }, 600);
-    }
+    if (direction === 'about-home') return;
     clearTimeout(cleanupTimer);
     cleanupTimer = window.setTimeout(() => {
       if (current === generation) clearTransition();
