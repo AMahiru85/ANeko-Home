@@ -44,8 +44,10 @@ export function bindHomeHeader(root: HTMLElement) {
       about.style.opacity = playing && snapshot.stage < 2 ? '0' : '1';
       icon.style.transform = playing ? 'translateY(-135%)' : 'translateY(0%)';
     }
-    const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 10;
-    const offset = mobile() && playing && snapshot.stage < 1 ? window.innerHeight / 2 - 2 * rootSize - heading.offsetHeight / 2 : 0;
+    const topPadding = Number.parseFloat(getComputedStyle(root).paddingTop) || 0;
+    const offset = mobile() && playing && snapshot.stage < 1
+      ? (window.innerHeight - heading.offsetHeight) / 2 - topPadding
+      : 0;
     if (first) heading.style.transform = 'translateY(' + offset + 'px)';
     motion(heading, 'transform', 'translateY(' + offset + 'px)', mobile() && playing && snapshot.stage >= 1 ? 1080 : 0);
     motion(scale, 'transform', 'scale(' + (playing && snapshot.stage < 1 ? '.72' : '1') + ')', playing ? 1080 : 0);

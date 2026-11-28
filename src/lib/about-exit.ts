@@ -1,8 +1,7 @@
-type StyleNode = HTMLStyleElement | HTMLLinkElement;
 type InlineStyle = [string, string, string][];
 
 export type AboutExit = {
-  prepareSwap: (next: Document) => void;
+  contentFinished: Promise<void>;
   afterSwap: () => void;
   cancel: () => void;
 };
@@ -19,25 +18,9 @@ const freezeRect = (element: HTMLElement, rect: DOMRect) => Object.assign(elemen
   width: rect.width + 'px', height: rect.height + 'px', margin: '0', transform: 'none',
   zIndex: '10', pointerEvents: 'none',
 });
-const hasStyle = (next: Document, node: StyleNode) => [...next.head.querySelectorAll<StyleNode>('style,link[rel="stylesheet"]')].some(candidate => {
-  if (node instanceof HTMLLinkElement) return candidate instanceof HTMLLinkElement && candidate.href === node.href;
-  return candidate instanceof HTMLStyleElement && (candidate.textContent === node.textContent || !!node.dataset.viteDevId && candidate.dataset.viteDevId === node.dataset.viteDevId);
-});
-const aboutStyles = () => [...document.head.querySelectorAll<StyleNode>('style,link[rel="stylesheet"]')].filter(node => {
-  let css = node instanceof HTMLStyleElement ? node.textContent ?? '' : '';
-  try { css += [...(node.sheet?.cssRules ?? [])].map(rule => rule.cssText).join(''); } catch {}
-  return /\.about-(?:route|content|rich-text|bottom-fade|globe-slot)\b/.test(css);
-});
-
-// Match the desktop return's exponential scroll easing after Astro resets scroll.
-const scrollReturnFrames = Array.from({ length: 31 }, (_, index) => {
-  const offset = index / 30;
-  return { offset, remaining: index === 0 ? 1 : Math.max(0, 2 ** (-10 * offset) - .001) };
-});
-
-// Text belongs to the outgoing page; the persisted globe has its own, longer
-// visibility track. Keep their opacity independent across Astro's body swap.
-export function startAboutExit(returnDuration: number, onComplete: () => void): AboutExit {
+// Finish fading the live About content before Astro removes it.
+// The persisted canvas is the only outgoing layer carried across the swap.
+export function startAboutExit(onComplete: () => void): AboutExit {
   const main = document.querySelector<HTMLElement>('[data-about-page]');
   const slot = document.querySelector<HTMLElement>('[data-about-globe]');
   const canvas = slot?.querySelector<HTMLCanvasElement>('.travel-globe');
@@ -53,24 +36,16 @@ export function startAboutExit(returnDuration: number, onComplete: () => void): 
   const canvasInline = canvas ? saveInline(canvas, ['opacity', 'scale', 'transition', 'will-change']) : [];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const desktop = innerWidth > 768;
-  const styles = aboutStyles();
-  const retained: { original: StyleNode; clone: StyleNode }[] = [];
-  let mainRect = main?.getBoundingClientRect();
-  let mainAnimation: Animation | undefined, globeAnimation: Animation | undefined;
-  let mainScroll: Animation | undefined, headerScroll: Animation | undefined;
-  let scrollOffset = 0;
-  let headerSettled = true;
+  const contentAnimations: Animation[] = [];
+  const contentFade = { duration: 180, easing: 'ease-out', fill: 'both' } as const;
+  let globeAnimation: Animation | undefined;
   let globePlaceholder: HTMLDivElement | undefined;
   let preload: HTMLElement | null = null, preloadInline: string | null = null;
-  let swapped = false, stopped = false, mainDone = !main, globeDone = !canvas;
-  let mainRemoved = false, globeRemoved = false;
+  let swapped = false, stopped = false, globeDone = !canvas;
+  let globeRemoved = false;
 
   const finish = () => {
     if (stopped || !swapped) return;
-    if (mainDone && !mainRemoved) {
-      mainRemoved = true; main?.remove(); mainAnimation?.cancel(); mainScroll?.cancel();
-      retained.forEach(({ original, clone }) => { original.remove(); clone.remove(); });
-    }
     if (globeDone && !globeRemoved) {
       globeRemoved = true; slot?.remove();
       if (preload) {
@@ -81,7 +56,7 @@ export function startAboutExit(returnDuration: number, onComplete: () => void): 
       if (canvas) restoreInline(canvas, canvasInline);
       globeAnimation?.cancel();
     }
-    if (mainDone && globeDone && headerSettled) { stopped = true; onComplete(); }
+    if (globeDone) { stopped = true; onComplete(); }
   };
 
   if (slot && globeRect) {
@@ -103,8 +78,16 @@ export function startAboutExit(returnDuration: number, onComplete: () => void): 
     main.style.pointerEvents = 'none';
     const from = getComputedStyle(main).opacity;
     main.style.opacity = '0';
-    mainAnimation = main.animate([{ opacity: from }, { opacity: 0 }], { duration: reduced ? 0 : 300, easing: 'ease-out', fill: 'both' });
-    void mainAnimation.finished.then(() => { mainDone = true; finish(); }).catch(() => {});
+    if (!reduced) {
+      contentAnimations.push(main.animate([{ opacity: from }, { opacity: 0 }], contentFade));
+    }
+  }
+  const mobileHeading = !desktop && !reduced
+    ? document.querySelector<HTMLElement>('[data-about-author] [data-home-heading]')
+    : null;
+  if (mobileHeading) {
+    const opacity = getComputedStyle(mobileHeading).opacity;
+    contentAnimations.push(mobileHeading.animate([{ opacity }, { opacity: 0 }], contentFade));
   }
   if (canvas) {
     const current = getComputedStyle(canvas);
@@ -120,22 +103,11 @@ export function startAboutExit(returnDuration: number, onComplete: () => void): 
   }
 
   return {
-    prepareSwap(next) {
-      if (stopped) return;
-      if (desktop) {
-        mainRect = main?.getBoundingClientRect();
-        if (!reduced) scrollOffset = Math.max(0, scrollY);
-      }
-      if (mainDone) return;
-      // Retain the original Vite nodes instead of inserting duplicate HMR ids.
-      styles.filter(node => !hasStyle(next, node)).forEach(original => {
-        const clone = original.cloneNode(true) as StyleNode;
-        retained.push({ original, clone }); next.head.append(clone);
-      });
-    },
+    contentFinished: Promise.allSettled(contentAnimations.map(animation => animation.finished)).then(() => undefined),
     afterSwap() {
       if (stopped) return;
       swapped = true;
+      contentAnimations.forEach(animation => animation.cancel());
       globePlaceholder?.remove();
       preload = document.querySelector<HTMLElement>('.travel-preload');
       if (!globeDone && preload && globeRect) {
@@ -143,44 +115,15 @@ export function startAboutExit(returnDuration: number, onComplete: () => void): 
         freezeRect(preload, globeRect);
         Object.assign(preload.style, { opacity: '1', overflow: 'visible', animation: 'none' });
       }
-      if (!mainDone && main && mainRect) {
-        freezeRect(main, mainRect);
-        main.style.zIndex = '9';
-        main.dataset.aboutExit = '';
-        main.removeAttribute('data-about-page');
-        main.querySelector('[data-about-globe]')?.remove();
-        document.body.append(main);
-      }
-      if (scrollOffset > 0) {
-        const header = document.querySelector('[data-home-header]');
-        if (header) {
-          headerSettled = false;
-          headerScroll = header.animate(scrollReturnFrames.map(({ offset, remaining }) => ({
-            offset,
-            translate: '0 ' + (-scrollOffset * remaining) + 'px',
-          })), returnDuration);
-          void headerScroll.finished.then(() => {
-            headerSettled = true;
-            finish();
-          }).catch(() => {});
-        }
-        if (!mainDone && main && mainRect) {
-          const settledTop = mainRect.top + scrollOffset;
-          mainScroll = main.animate(scrollReturnFrames.map(({ offset, remaining }) => ({
-            offset,
-            top: (settledTop - scrollOffset * remaining) + 'px',
-          })), returnDuration);
-        }
-      }
       finish();
     },
     cancel() {
       if (stopped) return;
-      stopped = true; mainAnimation?.cancel(); globeAnimation?.cancel();
-      mainScroll?.cancel(); headerScroll?.cancel();
-      retained.forEach(({ original, clone }) => { if (swapped) original.remove(); clone.remove(); });
+      stopped = true;
+      contentAnimations.forEach(animation => animation.cancel());
+      globeAnimation?.cancel();
       if (swapped) {
-        main?.remove(); slot?.remove();
+        slot?.remove();
         if (preload) {
           if (preloadInline === null) preload.removeAttribute('style');
           else preload.setAttribute('style', preloadInline);

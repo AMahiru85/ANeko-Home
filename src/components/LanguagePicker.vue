@@ -43,6 +43,9 @@ const switchLanguage = () => {
 }
 .language-trigger:focus-visible {outline:2px solid #1a1a1a;outline-offset:3px;}
 @media(hover:hover) {.language-trigger:hover .language-icon {scale:1.08;}}
-@media(max-width:768px) {.language-picker {top:calc(env(safe-area-inset-top) + 2rem);left:max(2rem,env(safe-area-inset-left));}}
+@media(max-width:768px) {
+  .language-picker {top:calc(env(safe-area-inset-top) + 2rem);left:max(2rem,env(safe-area-inset-left));}
+  :global(body.home-page .language-picker) {left:auto;right:max(2rem,env(safe-area-inset-right));}
+}
 @media(prefers-reduced-motion:reduce) {.language-icon {transition:none;}}
 </style>

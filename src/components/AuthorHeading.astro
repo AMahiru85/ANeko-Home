@@ -3,14 +3,15 @@ import { translate } from '../lib/language';
 import { languageFromPath } from '../lib/locale';
 
 const locale = languageFromPath(Astro.url.pathname);
-const subtitle = '全栈开发工程师';
+const subtitle = '或者说是 AMahiru ?';
 ---
 <div class="author-heading intro-heading about-author-heading" data-home-heading data-about-header-anchor transition:persist="author-heading">
   <div data-home-heading-scale>
     <div data-home-heading-opacity>
       <div class="intro-title-mask"><h1 id="intro-title">ANeko<br/></h1></div>
-      <br/>
+      <br class="author-heading-spacer" />
       <div class="intro-subtitle-mask"><p class="intro-sub" data-i18n={subtitle}>{translate(subtitle, locale)}</p></div>
+      <p class="intro-tagline" lang="zh-CN">不 过 是 笨 蛋 就 来 跳 舞 吧 ——<br/><span lang="en">SING A SONG !</span></p>
     </div>
   </div>
 </div>
@@ -21,5 +22,15 @@ const subtitle = '全栈开发工程师';
   .author-heading p {color:#9f9f9f;}
   .intro-title-mask {overflow:hidden;padding-bottom:.25rem;}
   .intro-subtitle-mask {overflow:hidden;padding-bottom:.5rem;}
+  .author-heading .intro-tagline {display:none;margin-top:.8rem;font-size:2rem;line-height:1.35;white-space:normal;}
+  @media(min-width:769px) {
+    :global([data-home-header]) .author-heading .author-heading-spacer {display:none;}
+    :global([data-home-header]) .author-heading h1 {font-size:42px;line-height:1.08;}
+    :global([data-home-header]) .author-heading .intro-sub {color:#595959;font-size:18px;line-height:1.35;}
+    :global([data-home-header]) .author-heading .intro-tagline {display:block;margin-top:14px;font-size:14px;line-height:1.6;}
+  }
   @media(max-width:768px) {.author-heading {text-align:center;}.author-heading h1,.author-heading p {width:auto;font-size:1.8rem;}}
+  @media(max-width:768px) {
+    :global([data-home-header]) .author-heading [data-home-heading-scale] {display:none;}
+  }
 </style>

@@ -5,7 +5,8 @@ import ProjectStage from '../components/ProjectStage.astro';
 import AuthorActions from '../components/AuthorActions.astro';
 import AuthorHeading from '../components/AuthorHeading.astro';
 import TravelGlobe from '../components/TravelGlobe.vue';
-import { languageFromPath } from '../lib/locale';
+import { translate } from '../lib/language';
+import { languageFromPath, localizedPath } from '../lib/locale';
 
 const locale = languageFromPath(Astro.url.pathname);
 ---
@@ -14,6 +15,9 @@ const locale = languageFromPath(Astro.url.pathname);
   <SiteNav />
   <div class="travel-preload" aria-hidden="true"><TravelGlobe initialLanguage={locale} client:load transition:persist="travel-globe" /></div>
   <main class="home-shell">
+    <nav class="mobile-home-topbar" aria-label={translate('网站导航', locale)}>
+      <a class="mobile-home-brand" href={localizedPath('/', locale)}>ANeko Home</a>
+    </nav>
     <ProjectStage />
     <section class="intro" aria-labelledby="intro-title" data-home-header>
       <AuthorHeading />
@@ -41,15 +45,39 @@ const locale = languageFromPath(Astro.url.pathname);
 
 <style>
   .intro .intro-heading, .intro .intro-actions { animation: none !important; }
+  .mobile-home-topbar { display: none; }
   .travel-preload { position: fixed; left: -10000px; top: 0; width: 2rem; height: 2rem; overflow: hidden; opacity: 0; pointer-events: none; z-index: -1; }
   .travel-preload .travel-globe { width: 100%; height: 100%; }
   .intro .intro-heading { display: block; gap: 0; }
-  .intro-title-mask { overflow: hidden; padding-bottom: .25rem; }
-  .intro-subtitle-mask { overflow: hidden; padding-bottom: .5rem; }
   .home-about-slot { width: 5.4rem; height: 5.4rem; flex-shrink: 0; }
   .home-about-icon-mask { position: relative; display: block; width: 2rem; height: 2rem; overflow: hidden; }
   [data-home-about-icon] { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
   html[data-initial-entry="home"] [data-home-header]:not([data-home-header-ready]) [data-home-heading-scale] { transform: scale(.5); }
   html[data-initial-entry="home"] [data-home-header]:not([data-home-header-ready]) [data-home-heading-opacity],
   html[data-initial-entry="home"] [data-home-header]:not([data-home-header-ready]) [data-home-about-enter] { opacity: 0; }
+
+  @media (max-width: 768px) {
+    .home-shell { --mobile-home-top: calc(env(safe-area-inset-top) + 2rem); }
+    .intro { padding-top: max(9rem, calc(var(--mobile-home-top) + 44px + 1.2rem)); }
+    .mobile-home-topbar {
+      position: fixed;
+      top: var(--mobile-home-top);
+      left: max(2rem, env(safe-area-inset-left));
+      right: max(2rem, env(safe-area-inset-right));
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      height: 44px;
+      box-shadow: 0 1px 0 var(--line);
+      color: #1a1a1a;
+      line-height: 1;
+      letter-spacing: .02em;
+    }
+    .mobile-home-brand { display: flex; align-items: center; min-height: 44px; font-size: 16px; letter-spacing: 0; white-space: nowrap; }
+    .mobile-home-brand:focus-visible {
+      outline: 2px solid #1a1a1a;
+      outline-offset: .4rem;
+    }
+  }
 </style>
