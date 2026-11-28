@@ -5,11 +5,14 @@ import ProjectStage from '../components/ProjectStage.astro';
 import AuthorActions from '../components/AuthorActions.astro';
 import AuthorHeading from '../components/AuthorHeading.astro';
 import TravelGlobe from '../components/TravelGlobe.vue';
+import { languageFromPath } from '../lib/locale';
+
+const locale = languageFromPath(Astro.url.pathname);
 ---
 
 <SiteLayout>
-  <SiteNav active="Home" />
-  <div class="travel-preload" aria-hidden="true"><TravelGlobe client:load transition:persist="travel-globe" /></div>
+  <SiteNav />
+  <div class="travel-preload" aria-hidden="true"><TravelGlobe initialLanguage={locale} client:load transition:persist="travel-globe" /></div>
   <main class="home-shell">
     <ProjectStage />
     <section class="intro" aria-labelledby="intro-title" data-home-header>

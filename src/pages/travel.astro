@@ -1,7 +1,10 @@
 ---
 import SiteLayout from '../layouts/SiteLayout.astro';
 import TravelFlight from '../components/TravelFlight.vue';
+import { languageFromPath } from '../lib/locale';
+
+const locale = languageFromPath(Astro.url.pathname);
 ---
-<SiteLayout title="Travel — Gabriel Beaugonin">
-  <TravelFlight client:load />
+<SiteLayout title="ANeko Home">
+  <TravelFlight initialLanguage={locale} client:load transition:persist="travel-flight" />
 </SiteLayout>

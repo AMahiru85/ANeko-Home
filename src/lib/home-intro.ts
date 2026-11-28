@@ -1,3 +1,4 @@
+import { isHomePath } from './locale';
 export type HomeIntroSnapshot = Readonly<{ stage: number; playing: boolean }>;
 export type HomeIntroProject = {
   video?: string | null;
@@ -64,7 +65,7 @@ function controller(): Controller {
   try { const entry = performance.getEntriesByType('navigation')[0]; if (entry?.name) navigationPath = new URL(entry.name).pathname; } catch {}
   const entryPath = window.__gabrielInitialPathname ?? navigationPath;
   window.__gabrielInitialPathname = entryPath;
-  const initial = entryPath === '/' && location.pathname === '/';
+  const initial = isHomePath(entryPath) && isHomePath(location.pathname);
   const listeners = new Set<Listener>(), timers = new Set<number>();
   let abortController: AbortController | undefined;
   const publish = (stage: number, playing: boolean) => {
@@ -85,7 +86,7 @@ function controller(): Controller {
     snapshot: Object.freeze({ stage: initial ? 0 : 5, playing: initial }), started: !initial, listeners,
     run(projects) {
       if (instance.started) return; instance.started = true;
-      if (location.pathname !== '/') { finish(); return; }
+      if (!isHomePath(location.pathname)) { finish(); return; }
       abortController = new AbortController(); const { signal } = abortController;
       document.addEventListener('astro:before-swap', finish, { once: true }); window.addEventListener('pagehide', finish, { once: true });
       const cursor = window.__gabrielCarouselCursor ?? 0;

@@ -1,12 +1,16 @@
 ---
+import { translate } from '../lib/language';
+import { languageFromPath } from '../lib/locale';
+
 interface Piece { text: string; ink?: boolean; href?: string }
 interface Props { as?: 'p' | 'h4' | 'li'; content: Piece[]; delay?: number }
+const locale = languageFromPath(Astro.url.pathname);
 const { as: Tag = 'p', content, delay = 0 } = Astro.props;
 ---
-<Tag class="about-rich-text" data-about-rich-text data-base-delay={delay} data-language-content={JSON.stringify(content)} data-language-rendered="en">
+<Tag class="about-rich-text" data-about-rich-text data-base-delay={delay}>
   {content.map((part) => part.href
-    ? <a href={part.href} target="_blank" rel="noopener noreferrer" class:list={[part.ink && 'about-ink', 'about-rich-link']} data-about-part>{part.text}</a>
-    : <span class:list={[part.ink && 'about-ink']} data-about-part>{part.text}</span>)}
+    ? <a href={part.href} target="_blank" rel="noopener noreferrer" class:list={[part.ink && 'about-ink', 'about-rich-link']} data-about-part>{translate(part.text, locale)}</a>
+    : <span class:list={[part.ink && 'about-ink']} data-about-part>{translate(part.text, locale)}</span>)}
 </Tag>
 <style>
   .about-rich-text { margin: 0; padding: 0; color: #9f9f9f; font-family: 'Suisse Intl',Arial,sans-serif; font-size: 2.4rem; line-height: 1.24; letter-spacing: 0; font-weight: 400; }

@@ -1,13 +1,18 @@
 ---
+import { translate } from '../lib/language';
+import { languageFromPath, localizedPath } from '../lib/locale';
+
+const locale = languageFromPath(Astro.url.pathname);
+const siteLabel = '网站导航';
 const links = [
-  ['Home', '/'],
-  ['About', '/about'],
-  ['Travel', '/travel'],
+  ['主页', '/'],
+  ['关于', '/about'],
+  ['旅行', '/travel'],
 ];
 ---
 
-<nav class="sr-only" aria-label="Site" data-i18n-label="Site">
+<nav class="sr-only" aria-label={translate(siteLabel, locale)}>
   <ul>
-    {links.map(([label, href]) => <li><a href={href} data-i18n={label}>{label}</a></li>)}
+    {links.map(([label, href]) => <li><a href={localizedPath(href, locale)}>{translate(label, locale)}</a></li>)}
   </ul>
 </nav>

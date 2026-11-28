@@ -1,8 +1,16 @@
+---
+import { translate } from '../lib/language';
+import { languageFromPath } from '../lib/locale';
+
+const locale = languageFromPath(Astro.url.pathname);
+const subtitle = '全栈开发工程师';
+---
 <div class="author-heading intro-heading about-author-heading" data-home-heading data-about-header-anchor transition:persist="author-heading">
   <div data-home-heading-scale>
     <div data-home-heading-opacity>
-      <div class="intro-title-mask"><h1 id="intro-title">Gabriel Beaugonin</h1></div>
-      <div class="intro-subtitle-mask"><p class="intro-sub" data-i18n="UX Designer">UX Designer</p></div>
+      <div class="intro-title-mask"><h1 id="intro-title">ANeko<br/></h1></div>
+      <br/>
+      <div class="intro-subtitle-mask"><p class="intro-sub" data-i18n={subtitle}>{translate(subtitle, locale)}</p></div>
     </div>
   </div>
 </div>

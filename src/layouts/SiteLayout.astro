@@ -3,31 +3,65 @@ import '../styles/global.css';
 import '../styles/route-motion.css';
 import { ClientRouter } from 'astro:transitions';
 import LanguagePicker from '../components/LanguagePicker.vue';
+import { translate } from '../lib/language';
+import { defaultLanguage, languageFromPath, languagePreferenceKey, localizedPath } from '../lib/locale';
 
 interface Props {
   title?: string;
 }
 
-const { title = 'Gabriel Beaugonin — UX Designer' } = Astro.props;
-const description = 'Portfolio of Gabriel Beaugonin, award-winning UX designer based in Paris. Selected work, recognitions, and contact.';
-const canonical = new URL(Astro.url.pathname, 'https://www.gabrielbeaugonin.com').toString();
+const { title = 'ANeko Home' } = Astro.props;
+const description = 'ANeko Home 是基于 Astro、Vue 和 Cloudflare Workers 的个人主页项目，包含博客、相册、网盘、邮箱和后台管理等功能。';
+const locale = languageFromPath(Astro.url.pathname);
+const canonicalPath = localizedPath(Astro.url.pathname, locale);
+const canonical = Astro.site ? new URL(canonicalPath, Astro.site).href : canonicalPath;
+const englishPath = localizedPath(Astro.url.pathname, defaultLanguage);
+const chinesePath = localizedPath(Astro.url.pathname, 'zh-CN');
 ---
 
 <!doctype html>
-<html lang="en" transition:animate="none">
+<html lang={locale} transition:animate="none">
   <head>
-    <script is:inline>
-      window.__gabrielInitialPathname ??= location.pathname;
-      document.documentElement.dataset.initialEntry = window.__gabrielInitialPathname === '/' ? 'home' : 'inner';
+    <script define:vars={{ chinesePath, locale, languagePreferenceKey }}>
+      if (window.__gabrielInitialPathname === undefined) {
+        window.__gabrielInitialPathname = location.pathname;
+        if (locale === 'en') {
+          let preference;
+          try { preference = localStorage.getItem(languagePreferenceKey); } catch {}
+          const browserLanguage = navigator.languages?.[0] || navigator.language || '';
+          if (preference === 'zh-CN' || (preference !== 'en' && /^zh(?:-|$)/i.test(browserLanguage))) {
+            location.replace(chinesePath + location.search + location.hash);
+          }
+        }
+      }
+      document.documentElement.dataset.initialEntry = ['/', '/zh', '/zh/'].includes(window.__gabrielInitialPathname) ? 'home' : 'inner';
     </script>
     <ClientRouter />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={description} />     <meta name="robots" content="index, follow" />     <link rel="canonical" href={canonical} />     <meta property="og:type" content="website" />     <meta property="og:site_name" content="Gabriel Beaugonin" />     <meta property="og:title" content={title} />     <meta property="og:description" content={description} />     <meta property="og:url" content={canonical} />     <meta property="og:image" content="/favicon.svg" />     <meta name="twitter:card" content="summary_large_image" />     <meta name="twitter:title" content={title} />     <meta name="twitter:description" content={description} />     <meta name="twitter:image" content="/favicon.svg" />     <link rel="preload" href="/fonts/suisseintl-book.woff2" as="font" type="font/woff2" crossorigin />
-    <title>{title}</title>
+    <meta name="description" content={translate(description, locale)} />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Gabriel Beaugonin" />
+    <meta property="og:title" content={translate(title, locale)} />
+    <meta property="og:description" content={translate(description, locale)} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content="/favicon.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={translate(title, locale)} />
+    <meta name="twitter:description" content={translate(description, locale)} />
+    <meta name="twitter:image" content="/favicon.svg" />
+    <link rel="preload" href="/fonts/suisseintl-book.woff2" as="font" type="font/woff2" crossorigin />
+    {Astro.site && <Fragment>
+      <link rel="alternate" hreflang="en" href={new URL(englishPath, Astro.site).href} />
+      <link rel="alternate" hreflang="zh-CN" href={new URL(chinesePath, Astro.site).href} />
+      <link rel="alternate" hreflang="x-default" href={new URL(englishPath, Astro.site).href} />
+    </Fragment>}
+    <title>{translate(title, locale)}</title>
   </head>
   <body>
-    <LanguagePicker client:load transition:persist="language-picker" />
+    <LanguagePicker initialLanguage={locale} client:load transition:persist="language-picker" />
     <slot />
     <script>
       import { installRouteMotion } from '../lib/route-motion';

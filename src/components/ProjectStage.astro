@@ -1,7 +1,10 @@
 ---
 import ProjectCarousel from './ProjectCarousel.vue';
 import { projects } from '../data/projects';
+import { languageFromPath } from '../lib/locale';
+
+const locale = languageFromPath(Astro.url.pathname);
 ---
 <div class="project-stage" transition:persist="project-carousel">
-  <ProjectCarousel projects={projects} client:load />
+  <ProjectCarousel initialLanguage={locale} projects={projects} client:load />
 </div>

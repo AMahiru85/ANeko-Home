@@ -3,7 +3,9 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { navigate } from 'astro:transitions/client';
 import { startTravelFlight } from '../lib/travel-flight-scene';
 import { useLanguage } from '../lib/language';
-const { t } = useLanguage();
+import { localizedPath, type Language } from '../lib/locale';
+const props = defineProps<{ initialLanguage: Language }>();
+const { language, t } = useLanguage(props.initialLanguage);
 const root = ref<HTMLElement>(), canvas = ref<HTMLCanvasElement>(), trails = ref<HTMLCanvasElement>();
 const country = ref('Bangkok'), failed = ref(false), leaving = ref(false);
 let stop = () => {}, transition: Animation | undefined, removeEvents = () => {};
@@ -17,7 +19,7 @@ const returnToAbout = async () => {
     transition = root.value.animate([{ clipPath: 'circle(' + Math.hypot(innerWidth, innerHeight) + 'px at ' + center + ')' }, { clipPath: 'circle(0px at ' + center + ')' }], { duration: 820, easing: 'cubic-bezier(.32,0,0,1)', fill: 'forwards' });
     await transition.finished.catch(() => {});
   }
-  await navigate('/about');
+  await navigate(localizedPath('/about', language.value));
 };
 onMounted(() => {
   if (!root.value || !canvas.value || !trails.value) return;
@@ -28,19 +30,22 @@ onMounted(() => {
   stop = startTravelFlight(canvas.value, trails.value, node, (_next, name) => { country.value = name; }, () => { failed.value = true; });
   const key = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); void returnToAbout(); } };
   const tap = () => { void returnToAbout(); };
-  const beforeSwap = () => { stop(); transition?.cancel(); };
+  const beforeSwap = () => {
+    if (document.documentElement.dataset.routeTransition === 'language') return;
+    stop(); transition?.cancel();
+  };
   window.addEventListener('keydown', key); node.addEventListener('flight:return', tap); document.addEventListener('astro:before-swap', beforeSwap);
   removeEvents = () => { window.removeEventListener('keydown', key); node.removeEventListener('flight:return', tap); document.removeEventListener('astro:before-swap', beforeSwap); };
 });
 onUnmounted(() => { stop(); transition?.cancel(); removeEvents(); });
 </script>
 <template>
-  <main ref="root" class="travel-flight" :aria-label="t('Interactive travel gallery')" :aria-busy="leaving" data-travel-flight>
-    <canvas ref="canvas" class="flight-canvas" :aria-label="t('Fly through travel photographs')" />
+  <main ref="root" class="travel-flight" :aria-label="t('互动旅行相册')" :aria-busy="leaving" data-travel-flight>
+    <canvas ref="canvas" class="flight-canvas" :aria-label="t('飞越旅行照片')" />
     <canvas ref="trails" class="flight-trails" aria-hidden="true" />
-    <p v-if="failed" class="flight-fallback" role="status">{{ t("The travel gallery couldn't load. Please try again.") }}</p>
-    <button class="flight-return" type="button" :aria-label="t('Return to the about page')" :disabled="leaving" @click="returnToAbout">
-      <span class="sr-only">{{ country }}</span><span class="flight-return-caption">{{ t('Click to return') }}</span>
+    <p v-if="failed" class="flight-fallback" role="status">{{ t("旅行相册加载失败，请重试。") }}</p>
+    <button class="flight-return" type="button" :aria-label="t('返回关于页面')" :disabled="leaving" @click="returnToAbout">
+      <span class="sr-only">{{ country }}</span><span class="flight-return-caption">{{ t('点击返回') }}</span>
     </button>
   </main>
 </template>

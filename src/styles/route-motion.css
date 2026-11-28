@@ -3,6 +3,26 @@
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 html[data-route-transition] * { view-transition-name: none !important; }
 
+@media (prefers-reduced-motion: no-preference) {
+  html[data-route-transition="language"] { view-transition-name: root !important; }
+  html[data-route-transition="language"]::view-transition-old(root) {
+    animation: language-fade-out var(--route-transition-duration) ease-in both !important;
+  }
+  html[data-route-transition="language"]::view-transition-new(root) {
+    animation: language-fade-in var(--route-transition-duration) ease-out both !important;
+  }
+  html[data-route-transition="language"][data-astro-transition-fallback="old"] body {
+    animation: language-fallback-out calc(var(--route-transition-duration) / 2) ease-in both;
+  }
+  html[data-route-transition="language"][data-astro-transition-fallback="new"] body {
+    animation: language-fallback-in calc(var(--route-transition-duration) / 2) ease-out both;
+  }
+}
+@keyframes language-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes language-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes language-fallback-out { from { opacity: 1; } to { opacity: .35; } }
+@keyframes language-fallback-in { from { opacity: .35; } to { opacity: 1; } }
+
 .project-stage { position: fixed; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
 .project-stage .project-slider[data-route-phase="home"] { pointer-events: auto; }
 .author-actions { position: relative; display: flex; align-items: center; gap: .4rem; width: 11.2rem; height: 5.4rem; }

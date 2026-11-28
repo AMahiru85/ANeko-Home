@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { isAboutPath, isHomePath } from '../lib/locale';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import type { Project } from '../data/projects';
 import { CARD_MAGNET, cardMagneticTarget, MotionNumber, opacityEase } from '../lib/carousel-motion';
 import { ensureHomeIntro, getHomeIntroSnapshot, subscribeHomeIntro, type HomeIntroSnapshot } from '../lib/home-intro';
 import { useLanguage } from '../lib/language';
-const { language, t } = useLanguage();
-const props=withDefaults(defineProps<{projects:Project[];introStage?:number;playIntro?:boolean}>(),{playIntro:undefined});
+import type { Language } from '../lib/locale';
+const props=withDefaults(defineProps<{initialLanguage:Language;projects:Project[];introStage?:number;playIntro?:boolean}>(),{playIntro:undefined});
+const { language, t } = useLanguage(props.initialLanguage);
 const sharedIntro=getHomeIntroSnapshot();
 const controlled=computed(()=>props.introStage!==undefined||props.playIntro!==undefined);
 const cursor=ref(0), dragging=ref(false), mobile=ref(false), mounted=ref(false), intro=ref(props.playIntro??sharedIntro.playing), stage=ref(props.introStage??(props.playIntro===false?5:sharedIntro.stage));
@@ -18,7 +20,7 @@ const stack=computed(()=>props.projects.length?Array.from({length:7},(_,i)=>{
 }):[]);
 type Motion={x:MotionNumber;y:MotionNumber;rotate:MotionNumber;scale:MotionNumber;opacity:MotionNumber;magnetX:MotionNumber;magnetY:MotionNumber;magnetEnabled:boolean;magnetInside:boolean;node?:HTMLElement;magnetNode?:HTMLElement};
 const motions=new Map<number,Motion>(),videos=new Map<number,HTMLVideoElement>(),warmVideos=new Map<string,HTMLVideoElement>();
-watch(language,()=>videos.forEach((video,key)=>video.setAttribute('aria-label',props.projects[modulo(key,props.projects.length)].title+' '+t('preview'))));
+watch(language,()=>videos.forEach((video,key)=>video.setAttribute('aria-label',props.projects[modulo(key,props.projects.length)].title+' '+t('预览'))));
 const timers=new Set<number>(),topMask=ref<HTMLElement>(),bottomMask=ref<HTMLElement>();
 const maskY=new MotionNumber(0),maskOpacity=new MotionNumber(1);
 let height=0,raf=0,lastTime=0,wheelUntil=0,repeatAt=0,dragAt=0,suppressClick=false;
@@ -28,7 +30,7 @@ type CarouselRoutePhase='home'|'exiting-about'|'about'|'returning-home';
 const routePhase=ref<CarouselRoutePhase>('home');
 let routeTimer=0;
 const pointer={id:null as number|null,x:0,y:0,dragging:false,captured:false,triggered:false};
-const allowed=()=>mounted.value&&!intro.value&&routePhase.value==='home'&&location.pathname==='/';
+const allowed=()=>mounted.value&&!intro.value&&routePhase.value==='home'&&isHomePath(location.pathname);
 const source=(project:Project)=>mobile.value&&project.mobileVideo?.trim()?project.mobileVideo:project.video;
 const later=(callback:()=>void,ms:number)=>{const id=window.setTimeout(()=>{timers.delete(id);callback();},ms);timers.add(id);};
 function position(offset:number) {
@@ -66,7 +68,7 @@ function releaseMagnet(m:Motion,disabled=false){
   else {m.magnetX.spring(0,CARD_MAGNET.releaseSpring,true);m.magnetY.spring(0,CARD_MAGNET.releaseSpring,true);}
 }
 function syncMagnetEnabled(){
-  const enabled=mounted.value&&routePhase.value==='home'&&!mobile.value&&!intro.value&&!dragging.value&&performance.now()>=magnetReturnUntil&&location.pathname==='/';
+  const enabled=mounted.value&&routePhase.value==='home'&&!mobile.value&&!intro.value&&!dragging.value&&performance.now()>=magnetReturnUntil&&isHomePath(location.pathname);
   motions.forEach((m,key)=>{
     const next=enabled&&key===cursor.value;
     if(m.magnetEnabled&&!next)releaseMagnet(m,true);
@@ -107,7 +109,7 @@ function bindVideoSlot(key:number,element:unknown){
   const fresh=!videos.has(key);
   if(!video){video=document.createElement('video');video.src=src;video.muted=true;video.loop=true;video.playsInline=true;video.preload='auto';}
   else if(new URL(video.currentSrc||video.src,location.href).href!==new URL(src,location.href).href){video.src=src;video.load();}
-  video.setAttribute('aria-label',project.title+' '+t('preview'));
+  video.setAttribute('aria-label',project.title+' '+t('预览'));
   videos.set(key,video);if(video.parentElement!==element)element.appendChild(video);
   
   syncVideos();
@@ -161,8 +163,8 @@ function applyIntroSnapshot(snapshot:HomeIntroSnapshot){
 }
 function setRoute(pathname:string){
   if(!mounted.value)return;
-  const about=pathname==='/about'||pathname==='/about/';
-  if(!about&&pathname!=='/'&&pathname!=='')return;
+  const about=isAboutPath(pathname);
+  if(!about&&!isHomePath(pathname)&&pathname!=='')return;
   const wasAbout=routePhase.value==='about'||routePhase.value==='exiting-about';
   if(about===wasAbout)return;
   clearTimeout(routeTimer);
@@ -222,7 +224,7 @@ function up(e:PointerEvent){
   if(suppressClick)later(()=>{suppressClick=false;},0);
 }
 function click(e:MouseEvent,key:number){if(suppressClick){e.preventDefault();suppressClick=false;return;} const offset=key-cursor.value; if(offset!==0){e.preventDefault();advance(offset);}} function wheel(e:WheelEvent){
-  if(location.pathname!=='/')return;e.preventDefault();if(!allowed())return;
+  if(!isHomePath(location.pathname))return;e.preventDefault();if(!allowed())return;
   const delta=Math.abs(e.deltaY),now=performance.now();if(delta<20||now<wheelUntil)return;
   wheelUntil=now+Math.max(30,165-delta);advance(e.deltaY>0?-1:1);
 }
@@ -244,7 +246,7 @@ onMounted(()=>{
   const snapshot=getHomeIntroSnapshot();
   intro.value=controlled.value?props.playIntro!==false:snapshot.playing;
   stage.value=props.introStage??(intro.value?snapshot.stage:5);mounted.value=true;
-  if(location.pathname==='/about'||location.pathname==='/about/'){routePhase.value='about';intro.value=false;stage.value=5;}
+  if(isAboutPath(location.pathname)){routePhase.value='about';intro.value=false;stage.value=5;}
   maskY.set(intro.value?height*.6:0);maskOpacity.set(intro.value?0:1);sync(true,returning);
   if(mobile.value)props.projects.forEach(warm);
   window.addEventListener('wheel',wheel,{passive:false});window.addEventListener('keydown',key);window.addEventListener('resize',resize);
@@ -265,7 +267,7 @@ onUnmounted(()=>{
 });
 </script>
 <template>
-  <section class="project-slider" :aria-label="t('Project Slider')" :data-intro-stage="stage" :data-intro-playing="intro" :data-route-phase="routePhase" :aria-hidden="routePhase==='about'||routePhase==='exiting-about'">
+  <section class="project-slider" :aria-label="t('项目轮播')" :data-intro-stage="stage" :data-intro-playing="intro" :data-route-phase="routePhase" :aria-hidden="routePhase==='about'||routePhase==='exiting-about'">
     <div class="cards" :class="{dragging}" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="up" @pointerleave="up">
       <div v-for="item in stack" :key="item.key" :ref="element=>bindCard(item.key,element)" class="project-card" :class="{current:item.offset===0}" :data-card-cursor="item.key" :data-card-offset="item.offset">
         <div class="card-magnet">
@@ -281,7 +283,7 @@ onUnmounted(()=>{
     <div ref="topMask" class="carousel-mask carousel-mask-top" aria-hidden="true" />
     <div ref="bottomMask" class="carousel-mask carousel-mask-bottom" aria-hidden="true" />
   </section>
-    <div v-if="mounted" class="project-dots carousel-dots" :class="{'intro-visible':stage>=5&&(routePhase==='home'||routePhase==='returning-home')}" role="img" :aria-label="t('Project')+' '+(active+1)+' '+t('of')+' '+props.projects.length">
+    <div v-if="mounted" class="project-dots carousel-dots" :class="{'intro-visible':stage>=5&&(routePhase==='home'||routePhase==='returning-home')}" role="img" :aria-label="t('项目')+' '+(active+1)+' '+t('共')+' '+props.projects.length">
       <span v-for="(_,index) in props.projects" :key="index" :class="{active:index===props.projects.length-1-active}" />
     </div>
 </template>

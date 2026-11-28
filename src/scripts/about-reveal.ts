@@ -111,26 +111,28 @@ export function setupAboutReveals(root: HTMLElement) {
   }
 
   const ready = async () => {
-    await document.fonts.ready;
-    if (disposed || reduced.matches) return;
-    states.forEach((state) => split(state, true));
-    initialized = true;
-  };
-  const languageChanged = () => {
-    if (disposed) return;
-    states.forEach(state => {
-      window.clearTimeout(state.timer);
-      state.original = [...state.element.childNodes].map(node => node.cloneNode(true));
-      originalNodes.set(state.element, state.original);
-      if (initialized && !reduced.matches) split(state, false);
-    });
+    try {
+      if (reduced.matches) return;
+      await document.fonts.ready;
+      if (disposed || reduced.matches) return;
+
+      // Once the text is visible, leave it visible even if the fonts arrived late.
+      const firstBlock = states[0]?.element;
+      const canReveal = root.hasAttribute('data-about-reveal-pending')
+        && firstBlock && getComputedStyle(firstBlock).visibility === 'hidden';
+      if (canReveal) {
+        states.forEach(state => split(state, true));
+        initialized = true;
+      }
+    } finally {
+      root.removeAttribute('data-about-reveal-pending');
+    }
   };
   const resize = () => {
     cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => { if (!disposed && !reduced.matches) states.forEach((state) => split(state, false)); });
+    resizeFrame = requestAnimationFrame(() => { if (initialized && !disposed && !reduced.matches) states.forEach((state) => split(state, false)); });
   };
   window.addEventListener('resize', resize);
-  window.addEventListener('gabriel:language', languageChanged);
   ready();
   return () => {
     if (disposed) return;
@@ -138,7 +140,6 @@ export function setupAboutReveals(root: HTMLElement) {
     observer.disconnect();
     cancelAnimationFrame(resizeFrame);
     window.removeEventListener('resize', resize);
-    window.removeEventListener('gabriel:language', languageChanged);
     states.forEach((state) => {
       window.clearTimeout(state.timer);
       // The outgoing page remains visible during its route fade. Keep each

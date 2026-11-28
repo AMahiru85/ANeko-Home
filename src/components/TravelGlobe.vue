@@ -2,9 +2,12 @@
 const flight = { angle: 0, time: 0, bank: 0, rotation: 2.2 };
 </script>
 <script setup lang="ts">
+import { isAboutPath } from '../lib/locale';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useLanguage } from '../lib/language';
-const { t } = useLanguage();
+import type { Language } from '../lib/locale';
+const props = defineProps<{ initialLanguage: Language }>();
+const { t } = useLanguage(props.initialLanguage);
 
 const canvas = ref<HTMLCanvasElement | null>(null);
 const ready = ref(false);
@@ -46,7 +49,7 @@ onMounted(async () => {
   const look = new THREE.Matrix4(), quaternion = new THREE.Quaternion(), bankQuaternion = new THREE.Quaternion();
   let frame = 0, previous = performance.now(), elapsed = flight.time, angle = flight.angle, bank = flight.bank;
   let boost = 0, kick = 0, active = false, intersecting = true, lastScroll = window.scrollY;
-  let routeVisible = location.pathname === '/about' || location.pathname === '/about/';
+  let routeVisible = isAboutPath(location.pathname);
   const mouse = { x: 0, y: 0 }, magnet = { x: 0, y: 0, vx: 0, vy: 0 };
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const mobile = matchMedia('(max-width: 768px)').matches;
@@ -97,7 +100,7 @@ onMounted(async () => {
   const route = (event: Event) => {
     const pathname = (event as CustomEvent<{ pathname?: string }>).detail?.pathname;
     if (typeof pathname !== 'string') return;
-    routeVisible = pathname === '/about' || pathname === '/about/';
+    routeVisible = isAboutPath(pathname);
     syncActive();
   };
   const observer = new IntersectionObserver(entries => { intersecting = entries[0]?.isIntersecting ?? false; syncActive(); });
@@ -129,7 +132,7 @@ onUnmounted(() => { disposed = true; cleanup(); });
 </script>
 
 <template>
-  <canvas ref="canvas" class="travel-globe" data-webgl-scene="travel-globe" :data-plane-ready="ready" :aria-label="t('Rotating globe with an orbiting airplane')" />
+  <canvas ref="canvas" class="travel-globe" data-webgl-scene="travel-globe" :data-plane-ready="ready" :aria-label="t('飞机环绕的旋转地球')" />
 </template>
 <style scoped>
 .travel-globe { opacity: 1; scale: 1; transition: opacity .7s cubic-bezier(.22,1,.36,1), scale .7s cubic-bezier(.22,1,.36,1); }

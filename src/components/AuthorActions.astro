@@ -2,17 +2,22 @@
 import ButtonIcon from './ButtonIcon.vue';
 import ButtonMagnet from './ButtonMagnet.vue';
 import SocialMenu from './SocialMenu.vue';
-const about = Astro.url.pathname === '/about' || Astro.url.pathname === '/about/';
+import { translate } from '../lib/language';
+import { isAboutPath, languageFromPath, localizedPath } from '../lib/locale';
+
+const locale = languageFromPath(Astro.url.pathname);
+const openAbout = '查看关于页面';
+const about = isAboutPath(Astro.url.pathname);
 ---
 <div class="author-actions" data-author-actions-shell transition:persist="author-actions">
   <div class="author-user-route">
     <div class="home-about-slot" data-home-about-enter>
       <ButtonMagnet client:load>
-        <a class="about-button" href="/about" aria-label="Open About Page" data-i18n-label="Open About Page" data-home-about-link>
+        <a class="about-button" href={localizedPath('/about', locale)} aria-label={translate(openAbout, locale)} data-i18n-label={openAbout} data-home-about-link>
           <span class="home-about-icon-mask"><span data-home-about-icon><ButtonIcon name="user" /></span></span>
         </a>
       </ButtonMagnet>
     </div>
   </div>
-  <SocialMenu about={about} client:load />
+  <SocialMenu initialLanguage={locale} about={about} client:load />
 </div>
